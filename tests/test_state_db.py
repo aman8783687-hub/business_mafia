@@ -87,3 +87,20 @@ def test_push_does_not_downgrade_a_posted_episode(db, tmp_path, monkeypatch):
 
 def test_no_slot_commands_remain():
     assert not hasattr(state_db, "slot_check")
+
+
+def test_abandon_retires_a_pending_episode_everywhere(db, tmp_path, monkeypatch):
+    monkeypatch.setattr(state_db, "STATE_PATH", tmp_path / "missing.json")
+    ep = tmp_path / "episodes" / "e9"
+    (ep / "02_script").mkdir(parents=True)
+    (ep / "02_script" / "script.md").write_text("[HOOK]\n1. x\n")
+    state_db.push(db, tmp_path)
+    assert db.episodes.find_one({"_id": "e9"})["status"] == "pending"
+    state_db.episode_abandon(db, "e9", "topic rejected", tmp_path)
+    assert (ep / "08_publish" / "abandoned.json").exists()
+    assert db.episodes.find_one({"_id": "e9"})["status"] == "abandoned"
+    state_db.push(db, tmp_path)  # a later push must not resurrect it as pending
+    assert db.episodes.find_one({"_id": "e9"})["status"] == "abandoned"
+    import pending_episodes
+    assert pending_episodes.find_pending(tmp_path / "episodes") == []
+

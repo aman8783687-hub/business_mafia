@@ -14,7 +14,7 @@ FILE RULES: use `.scratch/` in this directory for temporary files.
 
 3. Pick the next topic per topic-strategy.md (prefer the topic the previous episode's [SABAK] promised; never the same vertical twice in a row: `python3 scripts/state_db.py recent 3`). Slug: `YYYY-MM-DD-<short-english-slug>`. Research first: `episodes/<slug>/01_research/sources.md` per research-and-facts.md. Then write `topic.json` (with `keywords` and `myth`), `02_script/script.md` + `shotlist.json` (script-formula.md, Hindi, tags [HOOK] [DUNIYA] [KHEL] [RAAZ] [SABAK], myth-then-number hook, a "मान लीजिए" character, numbers as words, ~480-600 words; beat 1's shot is the thumbnail scene: boss at the business, subject centred), and run `python3 scripts/check_script.py <slug>` until it prints `script.md ok`. Write `03_audio/chunk_plan.json` (voice-and-audio.md). Check compliance-and-safety.md. Mark the topic used: `python3 scripts/state_db.py topic-use "<topic>"`.
 
-4. `python3 scripts/generate_narration_chunks.py <slug>` then `python3 scripts/stitch_audio.py <slug>`. If stitch exits 3 (runtime outside 180-300 s), edit the script and chunk plan, delete the changed chunks' files, and rerun both. Then write `08_publish/metadata.json` (publishing-and-metadata.md, thumbnail-and-metadata.md) using `03_audio/timings.json` for chapters and `shorts_hook`.
+4. `python3 scripts/generate_narration_chunks.py <slug>` then `python3 scripts/stitch_audio.py <slug>`. If stitch exits 3 (runtime outside 180-300 s), edit the script and chunk plan, delete the changed chunks' files, and rerun both. Then write `08_publish/metadata.json` (publishing-and-metadata.md, thumbnail-and-metadata.md) using `03_audio/timings.json` for chapters and `shorts_hook`. Run `python3 scripts/check_script.py <slug>` again: with the chunk plan and metadata present it also checks that the spoken chunk text has no digits or English sentences, that every beat is in exactly one chunk, and that the thumbnail text is buildable (at most 4 Devanagari words, at most 4 annotations, no Latin letters). Fix everything it prints before continuing.
 
 5. `python3 scripts/generate_scenes.py <slug>`. Look at every `05_scenes/scene_*.png` against SKILL.md's quality gate (boss on-model, black/white/gold only, no text, at most two characters) and reroll bad beats with `--beats N --seed <new>`.
 
@@ -23,6 +23,7 @@ FILE RULES: use `.scratch/` in this directory for temporary files.
 RECOVERY:
 - A scene's `05_scenes/_flux_debug/scene_XXXX.error.txt` shows a failure: reroll it. If it says the Cloudflare daily quota is used up, stop and report it (the quota resets at 05:30 IST); finished beats are skipped on the next run.
 - A stage errors: read the error, fix the cause, rerun that stage.
+- An episode that cannot be finished (rejected topic, unsalvageable script): retire it with `python3 scripts/state_db.py episode-abandon <slug> "<why>"`, then start a new episode. A stuck pending episode otherwise fails every later cycle.
 - Never re-create an episode that already exists.
 
 7. Log deliberate deviations in `reports/changelog.md`.

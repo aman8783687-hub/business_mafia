@@ -26,8 +26,9 @@ Anything that must be identical across videos lives here, not in a doc or a seco
 | `topic-add` | add queued topics: a JSON object or list on stdin, each needing `topic` and `category` plus `setting`, `myth`, `angle`, `visual_hooks`, `score`, `keywords` |
 | `topic-use "<name>"` | queued -> used, stamped with today's date |
 | `topic-reject "<name>" "<why>"` | -> rejected |
-| `recent [N]` | recently made episodes with status (`pending`, `ready`, `posted`) |
+| `recent [N]` | recently made episodes with status (`pending`, `ready`, `posted`, `abandoned`) |
 | `episode-posted <slug> <url>` | the operator marks a finalized episode as posted |
+| `episode-abandon <slug> "<why>"` | retire an episode that cannot be finished (marker `08_publish/abandoned.json`; status `abandoned`) |
 | `pull` / `push` | run start / run end (`run_cycle.sh` does both) |
 
 Collections: `topics`, `episodes` (script, shotlist, chunk plan, metadata, `01_research/sources.md`, `08_publish/finalize_log.json`, plus `output_dir` and status), `state` (`channel_state`).

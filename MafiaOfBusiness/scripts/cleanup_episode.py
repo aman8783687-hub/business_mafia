@@ -14,9 +14,10 @@ from pathlib import Path
 
 WORKSPACE = Path(__file__).resolve().parent.parent
 MEDIA_DIRS = ("03_audio", "05_scenes", "07_edit")
+KEEP_FILE = "chunk_plan.json"
 
 
-def _finalized(episode_dir: Path) -> bool:
+def is_finalized(episode_dir: Path) -> bool:
     try:
         log = json.loads((episode_dir / "08_publish" / "finalize_log.json").read_text())
     except (OSError, ValueError):
@@ -25,13 +26,25 @@ def _finalized(episode_dir: Path) -> bool:
 
 
 def cleanup(episode_dir: Path) -> list[str]:
-    if not _finalized(episode_dir):
+    if not is_finalized(episode_dir):
         raise RuntimeError(f"refusing to clean {episode_dir.name}: episode not finalized")
     removed = []
     for name in MEDIA_DIRS:
         target = episode_dir / name
-        if target.exists():
+        if not target.exists():
+            continue
+        if name != "03_audio":
             shutil.rmtree(target)
+            removed.append(name)
+            continue
+        # chunk_plan.json is text, not media: keep it so the episode stays
+        # resumable and its record in MongoDB keeps the plan.
+        leftovers = [p for p in target.iterdir() if p.name != KEEP_FILE]
+        for p in leftovers:
+            shutil.rmtree(p) if p.is_dir() else p.unlink()
+        if not any(target.iterdir()):
+            target.rmdir()  # nothing worth keeping was there
+        if leftovers or not target.exists():
             removed.append(name)
     return removed
 

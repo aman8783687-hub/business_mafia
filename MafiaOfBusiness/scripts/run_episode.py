@@ -62,14 +62,6 @@ def run_stage(name: str, args: list[str]) -> None:
         sys.exit(result.returncode)
 
 
-def run_optional_stage(name: str, args: list[str]) -> None:
-    """A stage whose failure must not stop the episode."""
-    print(f"\n=== {name} ===")
-    result = subprocess.run([sys.executable, *args], cwd=WORKSPACE, env=_subprocess_env())
-    if result.returncode != 0:
-        print(f"[run_episode] {name} failed (exit {result.returncode}); continuing without it")
-
-
 def thumbnail_args(episode_dir: Path) -> list[str] | None:
     """make_thumbnail.py argv for this episode, or None when metadata.json has no thumbnail_text."""
     try:
@@ -89,6 +81,19 @@ def thumbnail_args(episode_dir: Path) -> list[str] | None:
     if scene.exists():
         args += ["--scene", str(scene)]
     return args
+
+
+def prepare_thumbnail(episode_dir: Path) -> list[str] | None:
+    """Delete any thumbnail left by an earlier attempt (finalize would ship a
+    stale title) and return make_thumbnail.py's argv, or None when metadata
+    has no thumbnail_text."""
+    (episode_dir / "08_publish" / "thumbnail.png").unlink(missing_ok=True)
+    return thumbnail_args(episode_dir)
+
+
+def is_finalized(episode_dir: Path) -> bool:
+    import cleanup_episode
+    return cleanup_episode.is_finalized(episode_dir)
 
 
 def main() -> None:
@@ -113,6 +118,10 @@ def main() -> None:
     slug = sys.argv[1]
     episode_dir = WORKSPACE / "episodes" / slug
 
+    if is_finalized(episode_dir):
+        print(f"[run_episode] {slug} is already finalized (see 08_publish/finalize_log.json); nothing to do.")
+        return
+
     required = [
         episode_dir / "01_research" / "sources.md",
         episode_dir / "02_script" / "script.md",
@@ -135,9 +144,11 @@ def main() -> None:
 
     for name, script in STAGES:
         if name == "Finalize":
-            thumb = thumbnail_args(episode_dir)
-            if thumb:
-                run_optional_stage("Thumbnail", thumb)
+            thumb = prepare_thumbnail(episode_dir)
+            if thumb is None:
+                print("[run_episode] ABORTED: metadata.json has no thumbnail_text (the thumbnail is required)")
+                sys.exit(1)
+            run_stage("Thumbnail", thumb)
         run_stage(name, [str(SCRIPTS / script), slug])
 
     print(f"\n=== DONE: {slug} ===")

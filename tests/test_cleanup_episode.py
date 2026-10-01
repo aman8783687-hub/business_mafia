@@ -37,3 +37,13 @@ def test_cleanup_is_idempotent(tmp_path):
     ep = _make(tmp_path, {"status": "ok"})
     ce.cleanup(ep)
     assert ce.cleanup(ep) == []
+
+
+def test_cleanup_keeps_the_chunk_plan_so_the_episode_stays_resumable_and_recorded(tmp_path):
+    ep = _make(tmp_path, {"status": "ok"})
+    (ep / "03_audio" / "chunk_plan.json").write_text("{}")
+    (ep / "03_audio" / "chunk_0001.mp3").write_bytes(b"x" * 10)
+    assert "03_audio" in ce.cleanup(ep)
+    assert (ep / "03_audio" / "chunk_plan.json").exists()
+    assert not (ep / "03_audio" / "chunk_0001.mp3").exists()
+    assert ce.cleanup(ep) == []  # idempotent: only the plan is left, nothing more to remove

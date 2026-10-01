@@ -12,6 +12,7 @@ copy. CLI:
     state_db.py topic-use "<name>"           -- mark a queued topic used
     state_db.py topic-reject "<name>" "<why>" -- reject a queued topic
     state_db.py episode-posted <slug> <url>  -- mark a finalized episode as posted on YouTube
+    state_db.py episode-abandon <slug> "<why>" -- retire an episode that cannot be finished
 """
 from __future__ import annotations
 
@@ -36,6 +37,7 @@ EPISODE_TEXT_FILES = (
     "03_audio/chunk_plan.json",
     "08_publish/metadata.json",
     "08_publish/finalize_log.json",
+    "08_publish/abandoned.json",
 )
 CHANNEL_STATE_ID = "channel_state"
 DEFAULT_DB_NAME = "mafia_of_business_pipeline"
@@ -126,6 +128,20 @@ def episode_posted(db, slug: str, url: str) -> None:
     )
 
 
+def episode_abandon(db, slug: str, reason: str, workspace: Path = WORKSPACE) -> None:
+    """Retire an episode that cannot be finished, so pending_episodes.py stops
+    reporting it and `pull` stops restoring it. Writes a marker file (the
+    local source of truth) and records the status in MongoDB."""
+    ep_dir = workspace / "episodes" / slug
+    now = datetime.now(timezone.utc).isoformat()
+    if ep_dir.exists():
+        marker = ep_dir / "08_publish" / "abandoned.json"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json.dumps({"reason": reason, "at": now}))
+    db.episodes.update_one({"_id": slug}, {"$set": {"slug": slug, "status": "abandoned",
+                                                    "abandoned_reason": reason, "abandoned_at": now}}, upsert=True)
+
+
 def _episode_status(files: dict) -> tuple[str, str | None]:
     raw = files.get("08_publish/finalize_log.json")
     if raw:
@@ -135,6 +151,8 @@ def _episode_status(files: dict) -> tuple[str, str | None]:
                 return "ready", log.get("output_dir")
         except json.JSONDecodeError:
             pass
+    if files.get("08_publish/abandoned.json"):
+        return "abandoned", None
     return "pending", None
 
 
@@ -156,6 +174,8 @@ def _push_episodes(db, workspace: Path) -> None:
         topic_raw = files.get("topic.json")
         topic = json.loads(topic_raw)["topic"] if topic_raw else None
         existing = db.episodes.find_one({"_id": ep_dir.name}) or {}
+        if existing.get("status") in ("posted", "abandoned") and status == "pending":
+            status = existing["status"]
         if existing.get("status") == "posted":
             status = "posted"
         db.episodes.update_one(
@@ -243,6 +263,8 @@ def main(argv: list[str] | None = None) -> int:
         topic_use(db, rest[0])
     elif cmd == "topic-reject":
         topic_reject(db, rest[0], rest[1])
+    elif cmd == "episode-abandon":
+        episode_abandon(db, rest[0], rest[1] if len(rest) > 1 else "no reason given")
     elif cmd == "episode-posted":
         episode_posted(db, rest[0], rest[1])
     else:

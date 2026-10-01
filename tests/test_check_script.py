@@ -54,3 +54,51 @@ def test_missing_and_out_of_order_sections():
     assert any("missing" in p and "RAAZ" in p for p in check_script.check(missing, SECTIONS))
     swapped = GOOD.replace("[DUNIYA]", "[TMP]").replace("[KHEL]", "[DUNIYA]").replace("[TMP]", "[KHEL]")
     assert any("order" in p for p in check_script.check(swapped, SECTIONS))
+
+
+def test_a_wrapped_line_without_a_beat_number_is_flagged_not_ignored():
+    bad = GOOD.replace("लागत तीन रुपये आती है।", "लागत तीन रुपये आती है,\nदस हज़ार नहीं 10,000 रुपये।")
+    problems = check_script.check(bad, SECTIONS)
+    assert any("without a beat number" in p and "10,000" in p for p in problems)
+
+
+def test_beat_without_a_space_after_the_dot_is_still_a_beat():
+    # stitch_audio parses r"^\s*(\d+)\.\s*(.+)$", so "2.पैसा 5 लाख" is beat 2 there
+    bad = GOOD.replace("2. सुबह पाँच बजे", "2.सुबह 5 बजे")
+    assert any("beat 2" in p and "digit" in p for p in check_script.check(bad, SECTIONS))
+
+
+def _plan(*chunks):
+    return {"chunks": [{"id": i + 1, "beats": b, "text": t} for i, (b, t) in enumerate(chunks)]}
+
+
+def test_chunk_plan_matching_the_script_passes():
+    plan = _plan(([1, 2], "एक कप चाय दस रुपये की।"), ([3], "दूध चीनी पत्ती।"), ([12, 13], "असली कमाई। कमेंट कीजिए।"))
+    assert check_script.check_chunk_plan(GOOD, plan) == []
+
+
+def test_chunk_text_with_digits_or_english_is_flagged_because_that_is_what_gets_spoken():
+    plan = _plan(([1, 2], "लागत 10,000 रुपये"), ([3], "Every morning he opens the stall"),
+                 ([12, 13], "असली कमाई।"))
+    problems = check_script.check_chunk_plan(GOOD, plan)
+    assert any("chunk 1" in p and "digit" in p for p in problems)
+    assert any("chunk 2" in p and "English" in p for p in problems)
+
+
+def test_chunk_plan_must_cover_every_beat_exactly_once():
+    plan = _plan(([1, 2, 3], "ठीक।"), ([3, 99], "ठीक।"))
+    problems = check_script.check_chunk_plan(GOOD, plan)
+    assert any("beat 3" in p and "more than one chunk" in p for p in problems)
+    assert any("beat 99" in p and "not in script" in p for p in problems)
+    assert any("beat 12" in p and "no chunk" in p for p in problems)
+
+
+def test_metadata_must_make_a_buildable_thumbnail_before_anything_is_spent():
+    ok = {"title": "पेट्रोल पंप", "thumbnail_text": "पंप का हिसाब",
+          "thumbnail_annotations": ["₹4.5/लीटर", "लोन ईएमआई"]}
+    assert check_script.check_metadata(ok) == []
+    assert any("thumbnail_text" in p for p in check_script.check_metadata({"title": "x"}))
+    assert any("at most 4 words" in p for p in check_script.check_metadata({**ok, "thumbnail_text": "एक दो तीन चार पाँच"}))
+    bad = check_script.check_metadata({**ok, "thumbnail_annotations": ["लोन EMI", "a", "b", "c", "d"]})
+    assert any("Latin" in p and "EMI" in p for p in bad)
+    assert any("at most 4 annotations" in p for p in bad)

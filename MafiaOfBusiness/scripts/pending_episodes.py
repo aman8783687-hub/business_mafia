@@ -9,12 +9,13 @@ from pathlib import Path
 EPISODES = Path(__file__).resolve().parent.parent / "episodes"
 
 
-def _finalized(episode_dir: Path) -> bool:
-    try:
-        log = json.loads((episode_dir / "08_publish" / "finalize_log.json").read_text())
-    except (OSError, ValueError):
-        return False
-    return isinstance(log, dict) and log.get("status") == "ok"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cleanup_episode import is_finalized  # noqa: E402
+
+
+def _done(episode_dir: Path) -> bool:
+    """Finalized, or retired by `state_db.py episode-abandon`."""
+    return is_finalized(episode_dir) or (episode_dir / "08_publish" / "abandoned.json").exists()
 
 
 def find_pending(episodes_dir: Path) -> list[str]:
@@ -23,7 +24,7 @@ def find_pending(episodes_dir: Path) -> list[str]:
     return [
         ep.name
         for ep in sorted(episodes_dir.iterdir())
-        if (ep / "02_script" / "script.md").exists() and not _finalized(ep)
+        if (ep / "02_script" / "script.md").exists() and not _done(ep)
     ]
 
 

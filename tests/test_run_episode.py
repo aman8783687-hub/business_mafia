@@ -39,3 +39,20 @@ def test_stage_order_checks_script_first_and_finalizes_before_cleanup():
     assert scripts[0] == "check_script.py"
     assert scripts.index("finalize_episode.py") < scripts.index("cleanup_episode.py")
     assert "publish_all.py" not in scripts
+
+
+def test_prepare_thumbnail_deletes_a_stale_png_and_is_required(tmp_path):
+    ep = _episode(tmp_path, {"thumbnail_text": "पंप का हिसाब"}, scenes=["scene_0001.png"])
+    stale = ep / "08_publish" / "thumbnail.png"
+    stale.write_bytes(b"old title")
+    args = run_episode.prepare_thumbnail(ep)
+    assert not stale.exists()
+    assert args[1] == "पंप का हिसाब"
+    assert run_episode.prepare_thumbnail(_episode(tmp_path / "b", {"title": "x"})) is None
+
+
+def test_finalized_episode_is_recognised_even_after_cleanup_removed_its_inputs(tmp_path):
+    ep = _episode(tmp_path, {"title": "x"})
+    assert run_episode.is_finalized(ep) is False
+    (ep / "08_publish" / "finalize_log.json").write_text('{"status": "ok"}')
+    assert run_episode.is_finalized(ep) is True
