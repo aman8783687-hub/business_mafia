@@ -5,10 +5,12 @@ Status: draft, awaiting operator review
 
 ## 1. Goal
 
-A GitHub Actions pipeline that makes one **Hindi** YouTube video per run for
-the new channel **Mafia of Business** and uploads it to Content Lab, where the
-operator downloads it and posts by hand. It is a fork of the RedHat Engineer
-pipeline in `../imagine_error_gh_action/`, which stays untouched.
+A **local** pipeline (`./make-video`) that makes one **Hindi** YouTube video
+per run for the new channel **Mafia of Business** and keeps the finished video
+on this machine; the operator posts it by hand. State lives in MongoDB. No
+Content Lab, no GitHub Actions for now (operator decision, 2026-10-01). It is
+a fork of the RedHat Engineer pipeline in `../imagine_error_gh_action/`, which
+stays untouched.
 
 **What the operator asked for**
 
@@ -22,11 +24,14 @@ pipeline in `../imagine_error_gh_action/`, which stays untouched.
 
 **Success criteria**
 
-1. `./make-video` (local) and the workflow (CI) each produce one finished
-   Hindi episode: 1920x1080, 180-300 s, Hindi narration, burned-in
-   Devanagari captions, a Devanagari thumbnail, and Hindi/Hinglish metadata.
-2. The upload lands in Content Lab under the Mafia of Business section.
-3. The episode's media is deleted after a confirmed upload, like RedHat.
+1. `./make-video` produces one finished Hindi episode: 1920x1080,
+   180-300 s, Hindi narration, burned-in Devanagari captions, a Devanagari
+   thumbnail, and Hindi/Hinglish metadata.
+2. The finished package sits in `MafiaOfBusiness/output/<slug>/` (video,
+   thumbnail, `.srt`, `metadata.json`, `posting.md`), and MongoDB records the
+   episode as `ready`.
+3. The episode's intermediate media (audio chunks, scene PNGs, per-beat
+   clips) is deleted once the final package is verified; the package is kept.
 4. The test suite passes, including new tests for the 5-minute cap, the Hindi
    voice and Devanagari caption chunking.
 5. One real end-to-end local run renders correctly. Devanagari conjuncts
@@ -36,9 +41,10 @@ pipeline in `../imagine_error_gh_action/`, which stays untouched.
 
 Fork, don't rebuild. The RedHat pipeline already works end to end: an
 opencode agent writes the content, Python scripts produce it, MongoDB holds
-the state, and Content Lab receives the upload. The changes are confined to
-content rules (skill and references), config (`channel_state.json`), and the
-scripts that care about language, length and branding.
+the state. The changes are confined to content rules (skill and references),
+config (`channel_state.json`), the scripts that care about language, length
+and branding, and swapping the Content Lab upload for a local "finalize"
+stage.
 
 Rejected alternatives:
 - **Shared library with RedHat** (one codebase, two channel configs): cleaner
@@ -48,26 +54,64 @@ Rejected alternatives:
 
 ## 3. Layout and naming
 
-New sibling folder `kaggle-experiment/mafia_of_business_gh_action/`, its own
-git repo (to be pushed to a new GitHub repo by the operator).
+New sibling folder `kaggle-experiment/mafia_of_business_gh_action/`, a local
+git repo only (no remote for now). The folder name keeps `_gh_action` for
+symmetry with the RedHat repo; nothing in it needs GitHub.
 
 | RedHat | Mafia of Business |
 |---|---|
 | `ImagineError/` (working dir) | `MafiaOfBusiness/` |
 | `.claude/skills/redhat-engineer-youtube/` | `.claude/skills/mafia-of-business-youtube/` |
-| `.github/workflows/redhat-engineer.yml` | `.github/workflows/mafia-of-business.yml` |
+| `.github/workflows/redhat-engineer.yml` | dropped (local only) |
+| slot logic (`slot-check`, `IMAGINE_ERROR_SLOT`, `make-video --slot`) | dropped (it only exists for scheduled CI) |
 | MongoDB db `imagine_error_pipeline` | `mafia_of_business_pipeline` (`MONGODB_DB` still overrides) |
-| Content Lab `PROJECT = "redhat-engineer"` | `"mafia-of-business"`, `CHANNEL_TAG = "Mafia of Business"` |
-| `IMAGINE_ERROR_SLOT` env var | `MOB_SLOT` |
-| output `redhat-engineer-<slug>-episode.mp4` | `mafia-of-business-<slug>-episode.mp4` |
+| `publish_all.py` + `publish_content_lab.py` (upload) | `finalize_episode.py` (local package + Mongo record) |
+| output `redhat-engineer-<slug>-episode.mp4` | `mafia-of-business-<slug>.mp4` in `output/<slug>/` |
 
 Not copied: `.venv/`, `.pytest_cache/`, `__pycache__/`, `.scratch/`,
-`episodes/*`, `.superpowers/`, old `docs/superpowers/` files, `.env` (the
-operator copies their own; same keys). The RedHat `reports/changelog.md` and
-`experiments.md` start fresh, with one entry noting the fork.
+`episodes/*`, `.superpowers/`, old `docs/superpowers/` files, the GitHub
+workflow, the Content Lab scripts and their tests, the raphael fallback
+backend (its cookie is captcha-blocked). The RedHat `reports/changelog.md`
+and `experiments.md` start fresh, with one entry noting the fork.
 
-Same secrets as RedHat (`CONTENT_LAB_URL`, `CONTENT_LAB_API_KEY`,
-`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `MONGODB_URI`).
+`.env` needs only `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and
+`MONGODB_URI` (copied from the RedHat `.env`; `.env` stays gitignored).
+`output/` and `episodes/*/` are gitignored.
+
+### 3.1 The finalize stage (replaces the upload)
+
+`run_episode.py` runs audio, scenes, assembly and thumbnail as before, then
+`finalize_episode.py <slug>`:
+
+1. Verifies the final mp4 (ffprobe: 1920x1080, has audio, duration 180-300 s),
+   the thumbnail and `metadata.json`.
+2. Copies them, plus `captions.srt`, into `output/<slug>/` and writes
+   `posting.md` there: title, alternates, description, tags, pinned comment,
+   community poll, Shorts hook range and the posting checklist, ready to paste
+   into YouTube Studio.
+3. Records the episode in MongoDB (`episodes` collection: slug, title,
+   duration, output path, `status: "ready"`, timestamps). Idempotent by slug.
+4. Writes `08_publish/finalize_log.json` (`status: ok`).
+5. Only then deletes the intermediates (`03_audio/`, `05_scenes/`,
+   `07_edit/`), as `cleanup_episode.py` did.
+
+DONE MEANS (cycle prompt): `pending_episodes.py` exits 0 and this episode's
+`finalize_log.json` shows `ok`. `run_cycle.sh` counts finalized episodes
+instead of uploads. The operator marks an episode `posted` by hand later with
+`state_db.py episode-posted <slug> <youtube-url>` (new subcommand), which
+lets the agent link the previous episode in descriptions.
+
+### 3.2 Shared Cloudflare quota
+
+This pipeline uses the same Cloudflare account as RedHat, and the free tier
+is 10,000 neurons a day, shared. A ~45-beat episode can use most of a day's
+quota (on 2026-10-01 the quota was already spent by RedHat before the first
+Mafia of Business image). Consequences:
+- Run at most one episode across both channels per day on the free tier, or
+  move this channel to its own Cloudflare account (operator's choice; only
+  `.env` changes).
+- `generate_scenes.py`'s existing quota stop plus skip-finished-beats means a
+  stopped run resumes the next day with `./make-video`.
 
 ## 4. Content design
 
@@ -130,7 +174,7 @@ Rules:
 - `stitch_audio.py` (after stitching) fails the stage with a clear message if
   the narration exceeds 300 s, or falls under 180 s. The fix is a shorter
   script, never a faster voice. `assemble_episode.py` re-checks the final
-  video duration before upload.
+  video duration in `finalize_episode.py`.
 
 ### 4.4 Compliance additions
 
@@ -180,8 +224,9 @@ On top of RedHat's `compliance-and-safety.md`:
 
 ### 5.3 Captions
 
-- Font: **Noto Sans Devanagari Bold** (installed locally; CI installs
-  `fonts-noto-core`). libass with HarfBuzz shapes conjuncts.
+- Font: **Noto Sans Devanagari Bold** (installed on this machine;
+  `make-video` checks `fc-list` for it and stops with an install hint if
+  missing). libass with HarfBuzz shapes conjuncts.
 - Highlight colour gold (`&H0017A0D4` in ASS byte order), white text, black
   outline.
 - Chunking: 2-4 words per caption (Hindi words are short, but conjunct-heavy
@@ -260,7 +305,7 @@ rewards.
 - **Series hook:** each episode ends naming the next profession ("अगली बार:
   gym वाले का असली खेल"), and the agent picks that topic next.
 
-### 6.5 Operator package (attached as run artifact)
+### 6.5 Operator package (in `output/<slug>/posting.md`)
 
 `metadata.json` also gets:
 - `pinned_comment`: a bonus fact plus a question, in Hindi.
@@ -278,8 +323,9 @@ poll a day before; turn off auto-dubbing.
 ## 7. Error handling
 
 Inherited from RedHat: idempotent stages, `pending_episodes.py` resume,
-`run_cycle.sh` retries (default 4), the Cloudflare quota stop, the upload
-retry, cleanup only after a confirmed upload.
+`run_cycle.sh` retries (default 4), the Cloudflare quota stop, cleanup
+only after `finalize_episode.py` reports ok. Finalize is idempotent by slug,
+so a re-run never duplicates the Mongo record or the output folder.
 
 New:
 - **Length guard** (4.3 above): stage fails with "narration 312 s > 300 s cap:
@@ -307,21 +353,25 @@ New:
 - Live checks before calling it done: one Hindi narration chunk generated
   through edge-tts with word boundaries; the reference-image edit for the
   boss stickman (operator approves); one local end-to-end episode with a
-  real topic, its captions and thumbnail inspected by eye. The upload step
-  is run only after the operator confirms Content Lab accepts the
-  `mafia-of-business` project.
+  real topic, its captions and thumbnail inspected by eye, finalized into
+  `output/<slug>/` with its Mongo record.
 
 ## 9. Out of scope (possible later)
 
 - Automatic Shorts generation (9:16 re-crop of the hook). The operator cuts
   Shorts by hand from `shorts_hook` for now.
-- Posting to YouTube directly; analytics feedback; a schedule (workflow stays
-  `workflow_dispatch` until the operator adds a cron).
+- Content Lab upload and GitHub Actions (the RedHat code for both can be
+  ported back later if wanted).
+- Posting to YouTube directly; analytics feedback; a schedule.
 - English or other-language versions.
 
-## 10. Open items for the operator
+## 10. Decisions and open items
 
-1. Content Lab: does it accept a new `project` value (`mafia-of-business`)
-   automatically, or does the section need to be created first?
-2. A new GitHub repo for this folder, with the same five secrets.
-3. Approve the boss stickman reference image when it is generated.
+Decided 2026-10-01: no Content Lab (local `output/` + MongoDB only); no
+GitHub repo for now (local git only).
+
+Open:
+1. Approve the boss stickman reference image (generation is blocked until
+   the shared Cloudflare quota resets at 00:00 UTC / 05:30 IST).
+2. Separate Cloudflare account for this channel, or share RedHat's quota
+   (section 3.2).
