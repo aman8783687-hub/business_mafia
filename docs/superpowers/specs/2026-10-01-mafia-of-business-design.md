@@ -116,53 +116,71 @@ Mafia of Business image). Consequences:
 
 ### 4.1 Topics -- "Kaise kamata hai?"
 
-Everyday people and businesses every Indian has met. Starter bank (at least
-30 entries, by category):
+Revised 2026-10-01 from the operator's competitor research (Money Games
+@MoneyGames_YT, Money Code @moneycode_mc, both started Aug-Sep 2026). What
+wins there: **boring, hyper-local, cash businesses from Bharat**, where
+everyone has a guess and almost nobody has a good video (Money Code: petrol
+pump 720K views = 65x its average, dhaba 62K, kirana 44K; Money Games: dumper
+business 241K, poultry 69K, mushroom 60K, transport 42K). What flops:
+abstract or distant topics (Money Code: UPI 673, IPL 688, coaching 809,
+luxury 903, cashback 918, railways 1.7K, black money 2.1K).
 
-- **Street and local:** chai tapri, pani puri wala, dhaba, kirana store,
-  sabzi mandi wholesaler, auto/e-rickshaw driver, dabbawala, chhole bhature
-  stall.
-- **Small business:** restaurant, cloud kitchen, gym, salon, tuition and
-  coaching centre, PG/hostel owner, mobile repair shop, sweet shop (mithai).
-- **Big-ticket:** wedding planner, tent house and DJ, jeweller, real-estate
-  broker, petrol pump, cinema hall/multiplex, private school, hospital.
-- **Systems Indians wonder about:** politician (legal income only, see 4.4),
-  toll plaza, cricket team (IPL franchise), railway vendor contracts,
-  temple trusts (respectful, documented only), YouTuber/influencer.
-- **Famous-brand money stories:** Haldiram's, Amul, Zomato/Swiggy
-  commission, Dmart, Maggi, Parle-G. Company-level only, no attacks on
-  living founders.
+So the bank is built from six verticals (each is also a YouTube playlist):
+
+- **Farming & Pashu:** poultry, mushroom, fish farm, dairy, goat farm,
+  bee-keeping.
+- **Transport & Heavy Vehicles:** dumper/tipper, truck owner, JCB rental,
+  tractor rental, school van, auto/e-rickshaw.
+- **Khana & Street Food:** chai tapri, momo cart, pani puri, dhaba, juice
+  stall, sweet shop, restaurant.
+- **Dukaan & Retail:** kirana, petrol pump, medical store, mobile recharge
+  shop, hardware store, jeweller.
+- **Services:** barber/salon, laundry, gym, tent house & DJ, mobile repair,
+  PG owner, wedding planner.
+- **Recycling & Small Industry:** kabadiwala, plastic recycling, cold storage,
+  flour mill (chakki), brick kiln.
+
+Plus, sparingly, the **politician** episode the operator asked for (legal
+income only, 4.4), scored lower and scheduled after the channel has traction.
+Dropped from the starter bank: IPL, railways, coaching, toll plaza, private
+school, YouTuber and famous-brand stories (abstract or distant, per the data).
 
 Topic score (agent fills it when adding to the bank): relatability (does
-every Indian know this person?), the money surprise (is there a "wait,
-really?" fact?), search demand (do people type "X kitna kamata hai"?), and
-visual potential (can a stickman act it out?).
+every Indian know this business?), the myth gap (is there a "sunne me aasan
+lagta hai" belief the hisaab overturns?), search demand (do people type
+"X business profit" / "X kitna kamata hai"?), and visual potential.
 
-### 4.2 Story structure (replaces the mystery structure)
+### 4.2 Story structure: simple hisaab, told as a story
 
-Five sections, same mechanism as RedHat's (they drive voice presets, captions
-and ambience). New tags:
+Operator decision 2026-10-01: the script may include **simple hisaab as
+story** -- named costs and one rupee number per beat, carried by a character
+("रमेश हर महीने चालीस हज़ार की EMI भरता है"). Still no formulas, no stacked
+percentages, no tables. This replaces the earlier "almost no numbers" rule;
+both competitor channels show the money breakdown *is* the hook.
+
+Five sections (they drive voice presets, captions and ambience):
 
 | Tag | Time | Job |
 |---|---|---|
-| `[HOOK]` | 0:00-0:20 | First sentence is a question or a shocking rupee fact ("एक कप चाय दस रुपये की... पर उसमें मुनाफ़ा कितना?"). One-line promise: "आज आप जानेंगे असली खेल क्या है." |
-| `[DUNIYA]` | 0:20-1:00 | The world: who this person is, the day they live, what everyone *thinks* they earn. |
-| `[KHEL]` | 1:00-3:00 | The game: 3-4 money streams, each as a small scene (a customer, a supplier, a deal). The bulk. |
-| `[RAAZ]` | 3:00-3:45 | The secret trick: the one non-obvious move that makes the real money (gym memberships people never use, chai's 70% margin, the tent-house's rental reuse). This is what gets shared. |
-| `[SABAK]` | last 20-40 s | The takeaway, a loop back to the hook's image, one specific comment question, next-episode pointer. |
+| `[HOOK]` | 0:00-0:20 | **Myth, then one number shock.** "पेट्रोल पंप खोल लो, बैठे-बैठे नोट गिनो... सुनने में कितना आसान लगता है ना?" then "पर पंचानवे रुपये के पेट्रोल में मालिक को मिलते हैं सिर्फ़ साढ़े चार।" Then tease the [RAAZ]. |
+| `[DUNIYA]` | 0:20-1:00 | **The character and the setup.** A hypothetical owner with a common name (रमेश, राजू, शर्मा जी), introduced as an example ("मान लीजिए..."): what he invests, where, why he started. |
+| `[KHEL]` | 1:00-3:00 | **पैसा कहाँ बनता है, कहाँ डूबता है.** The money in, then the leaks: EMI, rent, staff, bijli, diesel, wastage, udhaar. One rupee number per beat. One comparison (highway vs gaon, small vs big). |
+| `[RAAZ]` | 3:00-3:45 | **The hero product or the hidden twist**: the dal that carries the dhaba, the ₹1.5 papad sold for ₹10, the tanker that must be paid first, the bad month that sinks a dumper owner. What gets shared. |
+| `[SABAK]` | last 20-40 s | **Two or three simple rules** (menu chhota rakho, emergency fund, repeat customer > margin), the payoff line ("ये धंधा पेट्रोल का नहीं, कैश-फ़्लो और भरोसे का है"), one specific comment question, next-episode pointer. |
 
 Rules:
 - Story voice, second person, present tense: "आप सुबह पाँच बजे दुकान खोलते हैं..."
-- **No math.** At most one or two simple rupee figures per section, said the
-  way people talk ("दस रुपये की चाय, लागत तीन रुपये"). No percentages
-  stacked, no formulas, no tables.
+- **Hisaab, not math:** one rupee figure per beat, said the way people talk
+  ("दस रुपये की चाय, लागत तीन रुपये"). No formulas, no tables, no stacked
+  percentages. If a number needs a calculation to understand, replace it
+  with a comparison.
 - Undocumented figures are labeled as estimates ("अंदाज़न", "लगभग") and
   given as a round range. Never an invented exact figure.
 - Conversational Hindi, not shuddh/textbook Hindi. Common English business
-  words stay in English and in Devanagari script (प्रॉफ़िट, मार्जिन,
-  कस्टमर) because that is how viewers say them.
+  words (EMI, profit, margin, customer) are fine, written in Devanagari
+  (ईएमआई, प्रॉफ़िट) so the TTS reads them naturally.
 - Script in Devanagari only. Numbers written as words for the TTS
-  ("दस हज़ार", not "10,000"), so the voice reads them naturally.
+  ("दस हज़ार", not "10,000").
 
 ### 4.3 Length
 
@@ -183,6 +201,9 @@ On top of RedHat's `compliance-and-safety.md`:
   ADR-type aggregate reports). No named living person accused of anything.
   Corruption is discussed only as reported, sourced, aggregate facts, called
   "आरोप" (allegation) where that is what it is.
+- **Hypothetical characters are labeled.** रमेश/राजू are introduced as an
+  example ("मान लीजिए"), never presented as a real person or a real
+  interview.
 - **"Mafia" is a metaphor.** The channel name means "insider who knows the
   game". No glorifying actual crime, no how-to for fraud, tax evasion or
   adulteration. A scam can be *explained* so viewers protect themselves.
@@ -240,14 +261,26 @@ Same engine, no music. Keyword cues retuned to Hindi stems in Devanagari:
   बाज़ार; paper for हिसाब, बिल, नोट.
 - `reveal_sting` on `[RAAZ]` beats (replaces `climax_reveal`).
 
-### 5.5 Thumbnail
+### 5.5 Thumbnail -- annotated "hisaab" infographic
 
-`make_thumbnail.py` changes:
-- Devanagari text with Noto Sans Devanagari Black/Bold, huge, white fill and
-  thick black outline. The accent word, usually a rupee figure, in gold.
-- Gold frame (replaces red).
-- The rupee figure is the thumbnail's hook ("₹40 लाख?", "चाय में 70%?").
-  Text 2-4 words, not a title repeat.
+Revised 2026-10-01 from the research: Money Code's three winners share one
+infographic thumbnail (a shop drawing with 4-5 handwritten money notes and
+arrows), and infographics stand out in a Hindi finance feed full of faces.
+Our version is our own whiteboard look, not a copy:
+
+- White whiteboard background, gold frame.
+- Title band at the top: the series phrase "<X> का हिसाब" (2-4 Devanagari
+  words) in big black type, accent word in gold, gold underline.
+- Centre: the episode's thumbnail scene (the boss at the business, drawn by
+  FLUX with the subject centred and empty space on the left and right).
+- 3-4 money annotations from `metadata.json` `thumbnail_annotations`, placed
+  left and right of the scene in bold black with gold arrows pointing in
+  ("₹4.5/लीटर", "पहले पेमेंट", "लोन EMI", "दाल = हीरो"). Digits are fine
+  here; only the narration must use words.
+- Same template on every episode, so the channel is recognisable in a
+  sidebar.
+- Fallbacks: no annotations -> the scene full-bleed with the title (5.5 v1);
+  no scene -> the boss on the left.
 - Legibility test at 210x118 px kept.
 
 ## 6. YouTube SEO and virality
@@ -257,39 +290,45 @@ from `sources.md` or labeled as an estimate in the video. Clickbait that
 the video doesn't pay off kills retention, and retention is what YouTube
 rewards.
 
-### 6.1 Title (written by the agent, `metadata.json`)
+### 6.1 Title (fixed series template)
 
-- **Hybrid script:** Devanagari Hindi plus the English/Hinglish search
-  keyword, because Indian viewers search in Roman Hinglish ("gym owner
-  kitna kamata hai", "restaurant business profit").
-  Example: `Restaurant वाले असल में कैसे कमाते हैं? | Business Model in Hindi`
-- 45-70 characters; the keyword in the first half.
-- Formulas: "X असल में कैसे कमाता है?", "X का असली खेल", "₹N का X
-  business -- सच क्या है?", "X आपको कैसे बेवकूफ़ बनाता है (legally)".
-- The agent writes three candidates and keeps the rejected two in
-  `metadata.json` `title_alternates` for the operator's A/B Test & Compare.
+Both competitors use one title template on every video, so viewers learn
+the series. Ours:
+
+`<X> वाला असल में कितना कमाता है? | <X in English> Business Profit in Hindi`
+
+e.g. `पेट्रोल पंप वाला असल में कितना कमाता है? | Petrol Pump Business Profit in Hindi`.
+The Devanagari question carries the curiosity; the English half is the
+Hinglish search phrase people type. 45-80 characters. The agent writes two
+alternates in `metadata.json` `title_alternates` (variations on the
+question, same English half) for YouTube's Test & Compare.
 
 ### 6.2 Description
 
-- First 150 characters: the hook in Hindi plus the Hinglish search phrase
-  (shown in search results and suggested-video snippets).
+- First 150 characters: the myth hook in Hindi plus the search phrase.
 - Chapters with Hindi labels (first at 0:00, at least four, from
-  `timings.json`). Chapters show up in Google search as key moments.
+  `timings.json`).
+- **"🔍 आपके सवाल (Your Queries)" block:** 15-20 search phrases people type,
+  one per line, mixing Hinglish, Devanagari and English ("petrol pump
+  kitna kamata hai", "petrol pump dealer margin", "पेट्रोल पंप कैसे खोलें"
+  ...). Money Games uses this block on every video.
 - Sources, then a channel line, then 3 hashtags:
   `#MafiaOfBusiness #BusinessModel #<topic>`.
 
-### 6.3 Tags and keywords
+### 6.3 Tags, keywords and playlists
 
-- 10-15 tags mixing Hindi, Hinglish and English variants of the main query
-  ("chai wala income", "चाय वाला कितना कमाता है", "chai business profit"),
-  plus series terms ("business model hindi", "how they make money hindi").
-- A new `keywords` field in `topic.json`: the 3-5 query phrases the episode
-  is built around. The script's hook and the title both use the main one.
+- 15-25 tags (YouTube's 500-character limit is the ceiling) mixing Hindi,
+  Hinglish and English variants of the main query plus series terms.
+- `topic.json` `keywords`: the 3-5 core phrases; title, hook and the first
+  description line all use the main one.
+- One playlist per vertical (4.1). `metadata.json` `playlist` names the
+  episode's vertical; `posting.md` tells the operator which playlist to add
+  it to.
 
 ### 6.4 Retention tricks (in the script formula)
 
-- **First 5 seconds:** a rupee shock or a "you've been paying for this"
-  line. No greeting, no channel intro.
+- **First 5 seconds:** the myth everyone believes ("सुनने में कितना आसान
+  लगता है ना?") and one number that breaks it. No greeting, no channel intro.
 - **Open loop:** the `[RAAZ]` secret is teased in the hook ("और आख़िर में
   वो एक trick, जिससे असली पैसा बनता है") and paid off at about 75%. This
   holds viewers to the end.
@@ -314,9 +353,9 @@ rewards.
 - `shorts_hook`: the hook's timestamp range (start/end seconds) so the
   operator can cut a Short by hand.
 
-README "posting checklist" for the operator: post 6-9 PM IST; default audio
-language Hindi; upload the Devanagari `.srt`; add to the "Kaise Kamata Hai"
-playlist; pin the comment within minutes of posting; publish the community
+README "posting checklist" for the operator: post daily if possible (both
+competitors grew on one video a day), 6-9 PM IST; default audio
+language Hindi; upload the Devanagari `.srt`; add to the episode's vertical playlist; pin the comment within minutes of posting; publish the community
 poll a day before; turn off auto-dubbing.
 
 ## 7. Error handling

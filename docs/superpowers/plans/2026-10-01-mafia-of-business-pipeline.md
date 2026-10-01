@@ -1033,24 +1033,28 @@ git add -A && git commit -m "Hindi-aware ambience: Devanagari keyword matching, 
 
 ---
 
-### Task 7: Devanagari gold thumbnail
+### Task 7: Annotated "hisaab" thumbnail (Devanagari, gold)
 
 **Files:**
 - Modify: `MafiaOfBusiness/scripts/make_thumbnail.py`
+- Modify: `MafiaOfBusiness/scripts/run_episode.py` (`thumbnail_args` passes annotations)
 - Test: `tests/test_make_thumbnail.py` (new)
 
 **Interfaces:**
-- Consumes: `thumbnail.{font_path,accent_rgb,frame_rgb,text_rgb,outline_rgb}` (Task 2), `brand/host/host-reference-clean.jpeg`.
-- Produces: `make_thumbnail.is_accent(word: str, accent_word: str | None) -> bool`; `make_thumbnail.render_scene_thumbnail(words, accent_word, scene_path) -> PIL.Image`; `make_thumbnail.render_host_thumbnail(words, accent_word) -> PIL.Image`. CLI unchanged (`title --accent-word --scene --out`); run_episode's `thumbnail_args` keeps working.
+- Consumes: `thumbnail.{font_path,accent_rgb,frame_rgb,text_rgb,outline_rgb}` (Task 2), `brand/host/host-reference-clean.jpeg`, `metadata.json` fields `thumbnail_text`, `thumbnail_accent_word`, `thumbnail_beat`, `thumbnail_annotations` (list of up to 4 short strings).
+- Produces: `make_thumbnail.is_accent(word: str, accent_word: str | None) -> bool`; `render_annotated_thumbnail(words, accent_word, annotations, scene_path) -> PIL.Image` (default layout, spec 5.5); `render_scene_thumbnail(words, accent_word, scene_path) -> PIL.Image` and `render_host_thumbnail(words, accent_word) -> PIL.Image` (fallbacks). CLI: `title --accent-word W --scene P --annotation A [--annotation B ...] --out O`. `run_episode.thumbnail_args(episode_dir)` adds one `--annotation` per entry (max 4) before `--scene`.
 
 - [ ] **Step 1: Write the failing test**
 
 Create `tests/test_make_thumbnail.py`:
 
 ```python
+import json
+
 from PIL import Image
 
 import make_thumbnail as mt
+import run_episode
 
 
 def test_accent_match_ignores_trailing_punctuation_and_handles_rupee():
@@ -1065,57 +1069,104 @@ def _gold_pixels(img):
     return sum(1 for p in img.getdata() if all(abs(a - b) < 30 for a, b in zip(p, gold)))
 
 
-def test_host_layout_renders_devanagari_with_gold_accent(tmp_path):
+def _scene(tmp_path):
+    scene = tmp_path / "scene.png"
+    Image.new("RGB", (1024, 576), (255, 255, 255)).save(scene)
+    return scene
+
+
+def test_annotated_layout_draws_annotations_with_gold_arrows(tmp_path):
+    scene = _scene(tmp_path)
+    bare = mt.render_annotated_thumbnail(["पेट्रोल", "पंप", "का", "हिसाब"], "हिसाब", [], scene)
+    noted = mt.render_annotated_thumbnail(["पेट्रोल", "पंप", "का", "हिसाब"], "हिसाब",
+                                          ["₹4.5/लीटर", "पहले पेमेंट", "लोन ईएमआई", "कैश फ़्लो"], scene)
+    assert noted.size == (1280, 720)
+    assert _gold_pixels(noted) > _gold_pixels(bare) + 1500  # four gold arrows
+    dark = lambda im: sum(1 for p in im.getdata() if max(p) < 60)
+    assert dark(noted) > dark(bare) + 3000  # four black labels
+
+
+def test_annotated_layout_survives_long_labels_and_missing_scene(tmp_path):
+    img = mt.render_annotated_thumbnail(["ढाबे", "का", "हिसाब"], None,
+                                        ["दाल = हीरो, बाक़ी सब साइड", "₹1.5 का पापड़ ₹10 में"], None)
+    assert img.size == (1280, 720)
+
+
+def test_scene_and_host_fallbacks_render(tmp_path):
+    assert mt.render_scene_thumbnail(["असली", "खेल"], None, _scene(tmp_path)).size == (1280, 720)
     plain = mt.render_host_thumbnail(["चाय", "में", "₹70?"], None)
     accented = mt.render_host_thumbnail(["चाय", "में", "₹70?"], "₹70?")
-    assert accented.size == (1280, 720)
-    # the accent word adds gold on top of the frame and divider
     assert _gold_pixels(accented) > _gold_pixels(plain) + 1000
 
 
-def test_scene_layout_renders_on_scene(tmp_path):
-    scene = tmp_path / "scene.png"
-    Image.new("RGB", (1024, 576), (255, 255, 255)).save(scene)
-    img = mt.render_scene_thumbnail(["असली", "खेल"], None, scene)
-    assert img.size == (1280, 720)
-    # white text with black outline -> plenty of dark outline pixels on a white scene
-    assert sum(1 for p in img.getdata() if max(p) < 60) > 5000
+def test_latin_letters_are_rejected_but_digits_and_rupee_pass():
+    import pytest
+    mt.check_no_latin(["₹4.5/लीटर", "पहले पेमेंट"])
+    with pytest.raises(SystemExit, match="ईएमआई"):
+        mt.check_no_latin(["लोन EMI"])
+
+
+def test_title_bottom_includes_matras_below_the_line():
+    from PIL import ImageDraw, ImageFont
+    img = Image.new("RGB", (1280, 300), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype(mt.FONT_BOLD, 100)
+    bottom = mt._draw_title(draw, ["पेट्रोल"], font, 10, 10, 120, None, fill=(0, 0, 0), stroke=0)
+    rows_with_ink = [y for y in range(300) if any(img.getpixel((x, y))[0] < 128 for x in range(0, 700, 2))]
+    assert bottom >= max(rows_with_ink)
 
 
 def test_devanagari_font_is_shaped_not_tofu():
     from PIL import ImageFont, features
     assert features.check("raqm"), "Pillow needs raqm to shape Devanagari"
     font = ImageFont.truetype(mt.FONT_BOLD, 80)
-    # 'क्ष' shaped is ONE conjunct, narrower than the unshaped sequence क + ् + ष
-    shaped = font.getlength("क्ष")
-    unshaped = font.getlength("क") + font.getlength("ष")
-    assert shaped < unshaped
+    # 'क्ष' shaped is ONE conjunct, narrower than क + ष side by side
+    assert font.getlength("क्ष") < font.getlength("क") + font.getlength("ष")
+
+
+def test_thumbnail_args_pass_up_to_four_annotations_before_scene(tmp_path):
+    ep = tmp_path / "ep"
+    (ep / "08_publish").mkdir(parents=True)
+    (ep / "05_scenes").mkdir()
+    (ep / "05_scenes" / "scene_0001.png").write_bytes(b"png")
+    notes = ["₹4.5/लीटर", "पहले पेमेंट", "लोन ईएमआई", "कैश फ़्लो", "पाँचवाँ"]
+    (ep / "08_publish" / "metadata.json").write_text(json.dumps(
+        {"thumbnail_text": "पेट्रोल पंप का हिसाब", "thumbnail_annotations": notes}, ensure_ascii=False))
+    args = run_episode.thumbnail_args(ep)
+    passed = [args[k + 1] for k, a in enumerate(args) if a == "--annotation"]
+    assert passed == notes[:4]
+    assert args[-2] == "--scene"
 ```
 
 - [ ] **Step 2: Run to verify failure**
 
 Run: `.venv/bin/python -m pytest tests/test_make_thumbnail.py -q`
-Expected: FAIL (`is_accent`, `ACCENT`, `render_host_thumbnail` missing).
+Expected: FAIL (`is_accent`, `ACCENT`, `render_annotated_thumbnail` missing).
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 3: Implement `make_thumbnail.py`**
 
-Replace the top of `make_thumbnail.py` (docstring through the colour constants) with:
+Replace the whole file with:
 
 ```python
 #!/usr/bin/env python3
 """
-Locked Mafia of Business thumbnail template: Devanagari title, gold accent
-word (usually a rupee figure), gold frame. Black/white/gold only.
+Locked Mafia of Business thumbnail template (spec 5.5): a "hisaab"
+infographic on a white whiteboard -- title band on top ("पेट्रोल पंप का
+हिसाब", accent word in gold, gold underline), the episode's scene in the
+centre, 3-4 money annotations left and right with gold arrows pointing in,
+gold frame. Black/white/gold only.
 
 Usage:
-    python3 make_thumbnail.py "चाय में ₹70?" --accent-word "₹70?" --out .../thumbnail.png
-    python3 make_thumbnail.py "असली खेल" --scene .../05_scenes/scene_0001.png
+    python3 make_thumbnail.py "पेट्रोल पंप का हिसाब" --accent-word हिसाब \
+        --annotation "₹4.5/लीटर" --annotation "लोन ईएमआई" \
+        --scene .../05_scenes/scene_0001.png --out .../08_publish/thumbnail.png
 
-With --scene the episode's hook image fills the frame and the title sits on
-it in huge white type with a thick black outline; without it the boss
-stickman stands on the left and the title sits on the right.
+Without --annotation: the scene full-bleed with the title on it. Without a
+scene: the boss stickman on the left, title on the right.
 """
 import argparse
+import math
+import re
 import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -1135,32 +1186,150 @@ TEXT = tuple(_T["text_rgb"])
 OUTLINE = tuple(_T["outline_rgb"])
 WHITE = (255, 255, 255)
 _TRAILING = ":,.?!।"
+_METRIC = "कHg"  # Devanagari headline + matras are taller than Latin "Hg"
+
+# Annotated layout geometry.
+TITLE_BOX = (50, 24, CANVAS_W - 50, 150)          # x0, y0, x1, y1
+SCENE_BOX = (340, 175, CANVAS_W - 340, CANVAS_H - 30)
+LABEL_MAX_W = 290
+# (label anchor, arrow target); left labels anchor on their left edge, right on their right edge.
+ANNOTATION_SLOTS = [
+    ((40, 230), (SCENE_BOX[0] + 30, 330)),
+    ((CANVAS_W - 40, 230), (SCENE_BOX[2] - 30, 330)),
+    ((40, 500), (SCENE_BOX[0] + 30, 520)),
+    ((CANVAS_W - 40, 500), (SCENE_BOX[2] - 30, 520)),
+]
 
 
 def is_accent(word, accent_word):
     if not accent_word:
         return False
     return word.rstrip(_TRAILING) == accent_word.rstrip(_TRAILING)
-```
 
-Keep `load_host_cutout`, `fit_font` and `wrap_words` unchanged, but in `fit_font` replace both `font.getbbox("Hg")` measurements with `font.getbbox("कHg")` (Devanagari headline and matras are taller than Latin "Hg"). Make the same replacement in the two render functions below.
 
-Replace `render_scene_thumbnail` and `main` with:
+def load_host_cutout():
+    """Crop the host figure tightly out of its white-background reference."""
+    im = Image.open(HOST_IMAGE).convert("RGB")
+    bbox = im.convert("L").point(lambda p: 0 if p > 245 else 255).getbbox()
+    if bbox:
+        pad = 20
+        l, t, r, b = bbox
+        im = im.crop((max(0, l - pad), max(0, t - pad), min(im.width, r + pad), min(im.height, b + pad)))
+    return im
 
-```python
-def _draw_title(draw, lines, font, x0, y, step, accent_word):
+
+def _line_h(font):
+    box = font.getbbox(_METRIC)
+    return box[3] - box[1]
+
+
+def wrap_words(words, font, max_width, draw):
+    """Greedy wrap into as many lines as needed - caller decides what counts as fitting."""
+    lines, current = [], []
+    for w in words:
+        trial = current + [w]
+        if draw.textlength(" ".join(trial), font=font) <= max_width or not current:
+            current = trial
+        else:
+            lines.append(" ".join(current))
+            current = [w]
+    if current:
+        lines.append(" ".join(current))
+    return lines
+
+
+def fit_font(draw, words, max_width, max_height, font_path, start_size=140, min_size=32):
+    """Largest size where the wrapped title fits the box in at most 2 lines;
+    raises rather than silently dropping words."""
+    size = start_size
+    while size >= min_size:
+        font = ImageFont.truetype(font_path, size)
+        lines = wrap_words(words, font, max_width, draw)
+        if len(lines) <= 2:
+            total_h = _line_h(font) * len(lines) * 1.25
+            widest = max(draw.textlength(line, font=font) for line in lines)
+            if total_h <= max_height and widest <= max_width:
+                return font, lines
+        size -= 4
+    raise SystemExit(f"Title '{' '.join(words)}' doesn't fit the template even at {min_size}px -- shorten it.")
+
+
+def _draw_title(draw, lines, font, x0, y, step, accent_word, fill=None, stroke=10, center_width=None):
+    """Draw the title; return the lowest drawn pixel row (matras below the
+    line included), so anything placed under it never cuts through them."""
+    bottom = y
     for line in lines:
         x = x0
+        if center_width:
+            x = x0 + (center_width - draw.textlength(line, font=font)) / 2
+        bottom = max(bottom, draw.textbbox((x, y), line, font=font, stroke_width=stroke)[3])
         for w in line.split():
-            color = ACCENT if is_accent(w, accent_word) else TEXT
-            draw.text((x, y), w, font=font, fill=color, stroke_width=10, stroke_fill=OUTLINE)
+            color = ACCENT if is_accent(w, accent_word) else (fill or TEXT)
+            draw.text((x, y), w, font=font, fill=color, stroke_width=stroke, stroke_fill=OUTLINE if fill is None else WHITE)
             x += draw.textlength(w + " ", font=font)
         y += step
+    return bottom
+
+
+def check_no_latin(texts):
+    """Noto Sans Devanagari has no Latin letters (they render as boxes);
+    digits, ₹ and punctuation are fine."""
+    bad = [t for t in texts if re.search(r"[A-Za-z]", t)]
+    if bad:
+        raise SystemExit(f"Thumbnail text must be Devanagari (digits and ₹ are fine), "
+                         f"e.g. EMI -> ईएमआई: {bad}")
+
+
+def _arrow(draw, start, end, color, width=7, head=24):
+    draw.line([start, end], fill=color, width=width)
+    ang = math.atan2(end[1] - start[1], end[0] - start[0])
+    for d in (2.6, -2.6):
+        draw.line([end, (end[0] + head * math.cos(ang + d), end[1] + head * math.sin(ang + d))], fill=color, width=width)
+
+
+def _label_font(draw, text):
+    for size in range(48, 26, -2):
+        font = ImageFont.truetype(FONT_BOLD, size)
+        if draw.textlength(text, font=font) <= LABEL_MAX_W:
+            return font
+    return ImageFont.truetype(FONT_BOLD, 26)
+
+
+def _fit_into(img, box):
+    x0, y0, x1, y1 = box
+    scale = min((x1 - x0) / img.width, (y1 - y0) / img.height)
+    img = img.resize((int(img.width * scale), int(img.height * scale)))
+    return img, (x0 + (x1 - x0 - img.width) // 2, y0 + (y1 - y0 - img.height) // 2)
+
+
+def render_annotated_thumbnail(words, accent_word, annotations, scene_path):
+    canvas = Image.new("RGB", (CANVAS_W, CANVAS_H), WHITE)
+    draw = ImageDraw.Draw(canvas)
+    x0, y0, x1, y1 = TITLE_BOX
+    font, lines = fit_font(draw, words, x1 - x0, y1 - y0, FONT_BOLD, start_size=110, min_size=40)
+    step = int(_line_h(font) * 1.2)
+    bottom = _draw_title(draw, lines, font, x0, y0, step, accent_word, fill=OUTLINE, stroke=0, center_width=x1 - x0)
+    draw.rectangle([CANVAS_W // 2 - 260, bottom + 8, CANVAS_W // 2 + 260, bottom + 16], fill=ACCENT)
+
+    art = Image.open(scene_path).convert("RGB") if scene_path and Path(scene_path).exists() else load_host_cutout()
+    art, pos = _fit_into(art, SCENE_BOX)
+    canvas.paste(art, pos)
+
+    for text, ((ax, ay), target) in zip(annotations[:4], ANNOTATION_SLOTS):
+        lfont = _label_font(draw, text)
+        w = draw.textlength(text, font=lfont)
+        left_side = ax < CANVAS_W / 2
+        x = ax if left_side else ax - w
+        draw.text((x, ay), text, font=lfont, fill=OUTLINE, stroke_width=3, stroke_fill=WHITE)
+        start = (x + w + 10, ay + _line_h(lfont) // 2 + 10) if left_side else (x - 10, ay + _line_h(lfont) // 2 + 10)
+        _arrow(draw, start, target, ACCENT)
+
+    draw.rectangle([0, 0, CANVAS_W - 1, CANVAS_H - 1], outline=FRAME, width=14)
+    return canvas
 
 
 def render_scene_thumbnail(words, accent_word, scene_path):
-    """Scene image full-bleed, title in big white type with a thick black
-    outline, gold accent word, gold frame."""
+    """Fallback without annotations: scene full-bleed, big white outlined title."""
     canvas = Image.open(scene_path).convert("RGB")
     scale = max(CANVAS_W / canvas.width, CANVAS_H / canvas.height)
     canvas = canvas.resize((int(canvas.width * scale) + 1, int(canvas.height * scale) + 1))
@@ -1169,27 +1338,23 @@ def render_scene_thumbnail(words, accent_word, scene_path):
     draw = ImageDraw.Draw(canvas)
     margin = 50
     font, lines = fit_font(draw, words, int(CANVAS_W * 0.62), CANVAS_H - 2 * margin, FONT_BOLD, start_size=190)
-    line_h = font.getbbox("कHg")[3] - font.getbbox("कHg")[1]
-    step = int(line_h * 1.25)
+    step = int(_line_h(font) * 1.25)
     _draw_title(draw, lines, font, margin, (CANVAS_H - step * len(lines)) // 2, step, accent_word)
     draw.rectangle([0, 0, CANVAS_W - 1, CANVAS_H - 1], outline=FRAME, width=14)
     return canvas
 
 
 def render_host_thumbnail(words, accent_word):
-    """Fallback: boss stickman on the left on black, title on the right."""
+    """Fallback without a scene: boss on the left (on its white card), title on the right, on black."""
     canvas = Image.new("RGB", (CANVAS_W, CANVAS_H), (17, 17, 17))
     draw = ImageDraw.Draw(canvas)
-    host = load_host_cutout()
     left_w = int(CANVAS_W * 0.42)
-    scale = min((left_w - 60) / host.width, (CANVAS_H - 60) / host.height)
-    host = host.resize((int(host.width * scale), int(host.height * scale)))
-    canvas.paste(host, ((left_w - host.width) // 2, CANVAS_H - host.height))
+    host, pos = _fit_into(load_host_cutout(), (30, 30, left_w - 30, CANVAS_H))
+    canvas.paste(host, pos)
     draw.rectangle([left_w, 0, left_w + 6, CANVAS_H], fill=FRAME)
     text_x0 = left_w + 50
     font, lines = fit_font(draw, words, CANVAS_W - text_x0 - 50, CANVAS_H - 120, FONT_BOLD)
-    line_h = font.getbbox("कHg")[3] - font.getbbox("कHg")[1]
-    step = int(line_h * 1.25)
+    step = int(_line_h(font) * 1.25)
     _draw_title(draw, lines, font, text_x0, (CANVAS_H - step * len(lines)) // 2, step, accent_word)
     draw.rectangle([0, 0, CANVAS_W - 1, CANVAS_H - 1], outline=FRAME, width=14)
     return canvas
@@ -1197,17 +1362,22 @@ def render_host_thumbnail(words, accent_word):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("title", help="Thumbnail title, 2-4 words, Devanagari, e.g. 'चाय में ₹70?'")
+    ap.add_argument("title", help="2-4 Devanagari words, e.g. 'पेट्रोल पंप का हिसाब'")
     ap.add_argument("--accent-word", default=None, help="One word from the title to draw in gold")
-    ap.add_argument("--scene", default=None, help="Path to a generated scene PNG to use as the background")
+    ap.add_argument("--annotation", action="append", default=[], help="A money note with an arrow (max 4)")
+    ap.add_argument("--scene", default=None, help="Path to a generated scene PNG")
     ap.add_argument("--out", default=str(ROOT / "brand" / "thumbnail-template-preview.png"))
     args = ap.parse_args()
 
     words = args.title.split()
     if len(words) > 4:
         raise SystemExit(f"Title has {len(words)} words; the locked template allows at most 4.")
-    if args.scene and Path(args.scene).exists():
-        canvas = render_scene_thumbnail(words, args.accent_word, args.scene)
+    check_no_latin([args.title, *args.annotation])
+    scene = args.scene if args.scene and Path(args.scene).exists() else None
+    if args.annotation:
+        canvas = render_annotated_thumbnail(words, args.accent_word, args.annotation, scene)
+    elif scene:
+        canvas = render_scene_thumbnail(words, args.accent_word, scene)
     else:
         canvas = render_host_thumbnail(words, args.accent_word)
     out_path = Path(args.out)
@@ -1224,27 +1394,38 @@ if __name__ == "__main__":
     main()
 ```
 
-Note: the host image is drawn on a white background; on the black fallback canvas paste it as-is (a white card behind the boss reads as a spotlight). Do not try to key it out.
+- [ ] **Step 4: Pass annotations from metadata**
 
-- [ ] **Step 4: Run tests**
+In `run_episode.py`'s `thumbnail_args`, after the `--accent-word` block and before the `beat = ...` line, add:
+
+```python
+    for note in (metadata.get("thumbnail_annotations") or [])[:4]:
+        args += ["--annotation", note]
+```
+
+- [ ] **Step 5: Run tests**
 
 Run: `.venv/bin/python -m pytest tests/test_make_thumbnail.py tests/test_run_episode.py -q`
-Expected: all pass.
+Expected: all pass. If `test_annotated_layout_draws_annotations_with_gold_arrows`'s pixel thresholds miss by a small margin, print the two counts and check the rendered image by eye before touching a threshold; a threshold may only move if the image is visibly correct.
 
-- [ ] **Step 5: Render both layouts and look**
+- [ ] **Step 6: Render all three layouts and look**
 
 ```bash
 cd /home/devdevil/development/kaggle-experiment/mafia_of_business_gh_action/MafiaOfBusiness
+mkdir -p .scratch
+../.venv/bin/python scripts/make_thumbnail.py "पेट्रोल पंप का हिसाब" --accent-word हिसाब \
+  --annotation "₹4.5/लीटर" --annotation "पहले पेमेंट" --annotation "लोन ईएमआई" --annotation "कैश फ़्लो" \
+  --scene brand/host/host-reference-clean.jpeg --out .scratch/thumb_annotated.png
+../.venv/bin/python scripts/make_thumbnail.py "जिम का असली खेल" --accent-word खेल --scene brand/host/host-reference-clean.jpeg --out .scratch/thumb_scene.png
 ../.venv/bin/python scripts/make_thumbnail.py "चाय में ₹70?" --accent-word "₹70?" --out .scratch/thumb_host.png
-../.venv/bin/python scripts/make_thumbnail.py "जिम का असली खेल" --accent-word "खेल" --scene brand/host/host-reference-clean.jpeg --out .scratch/thumb_scene.png
 ```
 
-Read both PNGs and both `-210x118-preview.png` files. Confirm the matras sit correctly, ₹ renders (not a box), the accent word is gold, and the 210x118 preview is still readable. If ₹ is a box, Noto Sans Devanagari lacks it: report it and fall back to writing "रुपये" in `thumbnail_text`, documented in `thumbnail-and-metadata.md` (Task 10).
+Read all three PNGs and `thumb_annotated-210x118-preview.png`. Confirm: matras and conjuncts correct, the gold underline sits below every matra, ₹ renders (not a box), arrows point from labels toward the scene, no label overlaps the scene or the title, the title band reads at 210x118. (₹ and digits were verified to render with Noto Sans Devanagari Bold on 2026-10-01; Latin letters do not, hence `check_no_latin`.)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-cd .. && git add -A && git commit -m "Devanagari thumbnail: gold accent and frame, boss fallback layout"
+cd .. && git add -A && git commit -m "Annotated hisaab thumbnail: Devanagari title band, money notes with gold arrows"
 ```
 
 ---
@@ -1287,6 +1468,7 @@ META = {
     "pinned_comment": "बोनस: ...",
     "community_post": "चाय वाला महीने में कितना कमाता है? A) 15k B) 50k C) 1 लाख+",
     "shorts_hook": {"start": 0.0, "end": 42.5},
+    "playlist": "Khana & Street Food",
 }
 
 
@@ -1317,7 +1499,7 @@ def test_verify_video_accepts_good_and_names_each_problem():
 def test_posting_md_has_everything_to_paste():
     md = fe.build_posting_md(META, 241.2)
     for needle in (META["title"], META["title_alternates"][1], "chai wala income", META["pinned_comment"],
-                   META["community_post"], "0:00-0:42", "6-9 PM IST", "4:01"):
+                   META["community_post"], "0:00-0:42", "6-9 PM IST", "4:01", "Khana & Street Food"):
         assert needle in md
 
 
@@ -1465,12 +1647,12 @@ WORKSPACE = SCRIPTS_DIR.parent
 OUTPUT_ROOT = WORKSPACE / "output"
 
 CHECKLIST = """## Posting checklist
-- [ ] Post between 6-9 PM IST.
+- [ ] Post between 6-9 PM IST (daily if you can: both reference channels grew on one video a day).
 - [ ] Upload the video; set the thumbnail from thumbnail.png.
 - [ ] Paste title, description and tags from this file.
 - [ ] Video language and default audio language: Hindi. Upload captions.srt as Hindi subtitles.
 - [ ] Not made for kids. Altered/synthetic content: yes (AI voice and images).
-- [ ] Add to the "Kaise Kamata Hai" playlist.
+- [ ] Add to the playlist named above (one playlist per vertical).
 - [ ] Pin the comment below within minutes of publishing.
 - [ ] Post the community poll (ideally a day before).
 - [ ] Turn off auto-dubbing.
@@ -1518,6 +1700,7 @@ def build_posting_md(metadata: dict, duration: float) -> str:
         *[f"- {t}" for t in metadata.get("title_alternates", [])], "",
         "## Description", metadata.get("description", ""), "",
         "## Tags", ", ".join(metadata.get("tags", [])), "",
+        "## Playlist", metadata.get("playlist", "(not set)"), "",
         "## Pinned comment", metadata.get("pinned_comment", ""), "",
         "## Community poll", metadata.get("community_post", ""), "",
         "## Shorts hook range",
@@ -1948,10 +2131,13 @@ def test_seed_has_30_complete_topics_across_categories():
     queued = json.loads((WS / "seed" / "topic_bank.seed.json").read_text())["queued"]
     assert len(queued) >= 30
     for t in queued:
-        for key in ("topic", "category", "setting", "angle", "visual_hooks", "score", "keywords"):
+        for key in ("topic", "category", "setting", "myth", "angle", "visual_hooks", "score", "keywords"):
             assert key in t, (t.get("topic"), key)
         assert 3 <= len(t["keywords"]) <= 5
-    assert len({t["category"] for t in queued}) >= 5
+    assert len({t["category"] for t in queued}) >= 6
+    # abstract/distant topics flopped for comparable channels (spec 4.1)
+    for flop in ("आईपीएल", "यूपीआई", "कोचिंग", "ट्रेन"):
+        assert not any(flop in t["topic"] for t in queued), flop
     assert len({t["topic"] for t in queued}) == len(queued)
 
 
@@ -1961,7 +2147,8 @@ def test_docs_reference_current_pipeline_only():
     for stale in ("Content Lab", "content_lab", "upload_log", "publish_all", "RedHat", "red fedora",
                   "COLD_OPEN", "RISING_MYSTERY", "CLIMAX_REVEAL", "en-US-Ava", "slot-check"):
         assert stale not in blob, stale
-    for needed in ("[HOOK]", "[RAAZ]", "finalize_log.json", "output/", "hi-IN-MadhurNeural", "check_script.py"):
+    for needed in ("[HOOK]", "[RAAZ]", "finalize_log.json", "output/", "hi-IN-MadhurNeural", "check_script.py",
+                   "thumbnail_annotations", "आपके सवाल", "playlist", "मान लीजिए"):
         assert needed in blob, needed
 
 
@@ -1978,42 +2165,42 @@ Expected: FAIL (seed empty; docs still RedHat).
 
 - [ ] **Step 3: Write the topic seed**
 
-Overwrite `MafiaOfBusiness/seed/topic_bank.seed.json` with 32 entries. Exact content:
+Overwrite `MafiaOfBusiness/seed/topic_bank.seed.json` with these 32 entries (six verticals from spec 4.1 plus one politician episode; order = queue order, strongest first). Exact content:
 
 ```json
 {"queued": [
- {"topic": "चाय वाला असल में कितना कमाता है", "category": "Street & Local", "setting": "A roadside chai tapri outside a railway station, 5 AM to midnight", "angle": "A ten-rupee cup costs about three to make; volume, the biscuit-and-cigarette counter and a rent-free pavement spot are the real game.", "visual_hooks": ["a steaming kettle on a stove", "a row of small glasses", "a crowd at the stall at dawn"], "score": 9, "keywords": ["chai wala income", "चाय वाला कितना कमाता है", "tea stall business profit", "chai business in hindi"]},
- {"topic": "पानी पूरी वाले का असली खेल", "category": "Street & Local", "setting": "An evening golgappa cart in a busy market", "angle": "Cheap ingredients, fast hands and a loyal evening crowd; the money is in how many plates per hour, not the price.", "visual_hooks": ["a cart with a pot of pani", "hands filling puris fast", "a queue of customers"], "score": 9, "keywords": ["pani puri wala income", "golgappa business profit", "पानी पूरी वाला कितना कमाता है"]},
- {"topic": "ढाबा मालिक कैसे कमाता है", "category": "Street & Local", "setting": "A highway dhaba with truck parking", "angle": "Trucks park free, drivers eat, sleep and come back; the dal is cheap, the loyalty is the asset.", "visual_hooks": ["a truck parked by a charpai", "a tandoor glowing", "a big pot of dal"], "score": 8, "keywords": ["dhaba business profit", "dhaba owner income", "ढाबा कितना कमाता है"]},
- {"topic": "किराना दुकान वाला कैसे टिका हुआ है", "category": "Street & Local", "setting": "A neighbourhood kirana store against quick-commerce apps", "angle": "Thin margins, credit (udhaar) to regulars, company schemes and distributor margins keep the corner shop alive.", "visual_hooks": ["shelves of packets", "an udhaar notebook", "a delivery bike passing by"], "score": 8, "keywords": ["kirana store profit", "kirana business margin", "किराना दुकान कितना कमाती है"]},
- {"topic": "ऑटो वाला दिन में कितना बचाता है", "category": "Street & Local", "setting": "A city auto-rickshaw from morning shift to night", "angle": "Owner vs rented auto, CNG, daily rent to the owner and app rides decide whether the day ends in profit.", "visual_hooks": ["an auto-rickshaw at a signal", "a fuel pump nozzle", "coins counted at night"], "score": 8, "keywords": ["auto driver income", "auto rickshaw earning per day", "ऑटो वाला कितना कमाता है"]},
- {"topic": "मुंबई के डब्बावाले का बिज़नेस मॉडल", "category": "Street & Local", "setting": "Mumbai local trains at lunchtime", "angle": "A low fee per tiffin, a colour code and thousands of members make a famously reliable cooperative.", "visual_hooks": ["a tray of tiffin boxes on a head", "a local train door", "a coded tiffin lid"], "score": 9, "keywords": ["mumbai dabbawala business model", "dabbawala income", "डब्बावाला कैसे काम करते हैं"]},
- {"topic": "रेस्टोरेंट वाले असल में कैसे कमाते हैं", "category": "Small Business", "setting": "A mid-size family restaurant in a tier-2 city", "angle": "Food is not the profit centre; drinks, desserts, menu design and table turnover are.", "visual_hooks": ["a menu card", "a cold drink bottle", "a table being cleared fast"], "score": 10, "keywords": ["restaurant business profit", "restaurant owner income", "रेस्टोरेंट कैसे कमाता है", "restaurant business model in hindi"]},
- {"topic": "क्लाउड किचन: बिना रेस्टोरेंट के रेस्टोरेंट", "category": "Small Business", "setting": "A small back-lane kitchen running five brands on delivery apps", "angle": "One kitchen, many app brands, no dining hall; the app commission is the boss.", "visual_hooks": ["one kitchen with five signboards", "a delivery bag", "a phone with orders"], "score": 8, "keywords": ["cloud kitchen business model", "cloud kitchen profit", "क्लाउड किचन कैसे कमाता है"]},
- {"topic": "जिम वाले का असली खेल", "category": "Small Business", "setting": "A neighbourhood gym in January and in March", "angle": "Yearly memberships sold in January to people who stop coming by March; the empty gym is the profit.", "visual_hooks": ["a crowded gym in January", "an empty gym in March", "a membership card"], "score": 10, "keywords": ["gym business profit", "gym owner income", "जिम वाला कितना कमाता है", "gym business model in hindi"]},
- {"topic": "सैलून वाला कैसे कमाता है", "category": "Small Business", "setting": "A unisex salon in a market", "angle": "A haircut barely pays; facials, packages, products and chair rent to stylists do.", "visual_hooks": ["a barber chair", "scissors and comb", "a shelf of products"], "score": 7, "keywords": ["salon business profit", "salon owner income", "सैलून कितना कमाता है"]},
- {"topic": "कोचिंग सेंटर का पैसा कहाँ से आता है", "category": "Small Business", "setting": "A coaching hub street like Kota or Mukherjee Nagar", "angle": "Batch size, toppers' posters, hostels, test series and study material are the real fee.", "visual_hooks": ["a classroom packed with students", "a topper poster", "a stack of study books"], "score": 9, "keywords": ["coaching institute business model", "coaching centre income", "कोचिंग कितना कमाती है"]},
- {"topic": "पीजी वाले अंकल की कमाई", "category": "Small Business", "setting": "A paying-guest house near a college", "angle": "One house split into many beds, food included, deposits held; occupancy is everything.", "visual_hooks": ["bunk beds in one room", "a tiffin at a table", "a rent ledger"], "score": 8, "keywords": ["pg business profit", "paying guest income", "पीजी कितना कमाता है"]},
- {"topic": "मोबाइल रिपेयर वाला कैसे कमाता है", "category": "Small Business", "setting": "A mobile repair counter in an electronics market", "angle": "Cheap parts, quick screen swaps and accessories, plus covers and chargers sold to every walk-in.", "visual_hooks": ["a cracked phone screen", "a tiny screwdriver", "a wall of phone covers"], "score": 7, "keywords": ["mobile repair shop income", "mobile repair business profit", "मोबाइल रिपेयर कितना कमाता है"]},
- {"topic": "मिठाई की दुकान का मीठा मुनाफ़ा", "category": "Small Business", "setting": "A famous sweet shop during Diwali", "angle": "Festival season makes the year; gift boxes and dry-fruit packs carry the margin.", "visual_hooks": ["a tray of laddoos", "a gift box with ribbon", "a festival crowd"], "score": 8, "keywords": ["sweet shop business profit", "mithai shop income", "मिठाई की दुकान कितना कमाती है"]},
- {"topic": "वेडिंग प्लानर की कमाई", "category": "Big-Ticket", "setting": "A big Indian wedding from booking to vidaai", "angle": "A fee on top of everything plus commissions from venues, decorators and caterers.", "visual_hooks": ["a wedding mandap", "a phone full of vendor calls", "a big flower arch"], "score": 9, "keywords": ["wedding planner income", "wedding planner business model", "वेडिंग प्लानर कितना कमाता है"]},
- {"topic": "टेंट हाउस और डीजे वाले का धंधा", "category": "Big-Ticket", "setting": "A tent house godown in wedding season", "angle": "Buy once, rent a hundred times; the shamiana pays for itself in a season.", "visual_hooks": ["a folded shamiana", "a big speaker", "a truck loaded with chairs"], "score": 8, "keywords": ["tent house business profit", "dj business income", "टेंट हाउस कितना कमाता है"]},
- {"topic": "ज्वेलर सोने पर कैसे कमाता है", "category": "Big-Ticket", "setting": "A family jewellery shop before Dhanteras", "angle": "Making charges, wastage, exchange offers and old-gold buyback; the gold price is not where the margin is.", "visual_hooks": ["a gold necklace on a stand", "a small weighing scale", "an old ring being exchanged"], "score": 9, "keywords": ["jeweller profit on gold", "making charges explained", "ज्वेलर कितना कमाता है"]},
- {"topic": "प्रॉपर्टी ब्रोकर की एक डील", "category": "Big-Ticket", "setting": "A real-estate broker's office in a growing suburb", "angle": "A small percentage from both sides of one deal can equal a year of salary.", "visual_hooks": ["a house key", "a handshake", "a map with plots"], "score": 8, "keywords": ["property dealer commission", "real estate broker income", "प्रॉपर्टी डीलर कितना कमाता है"]},
- {"topic": "पेट्रोल पंप मालिक कितना कमाता है", "category": "Big-Ticket", "setting": "A highway petrol pump", "angle": "A fixed dealer commission per litre is tiny; volume, the convenience store and lubricants make it work.", "visual_hooks": ["a fuel nozzle", "a queue of bikes", "an oil can on a shelf"], "score": 9, "keywords": ["petrol pump profit", "petrol pump owner income", "पेट्रोल पंप कितना कमाता है"]},
- {"topic": "सिनेमा हॉल टिकट से नहीं कमाता", "category": "Big-Ticket", "setting": "A multiplex on a Friday release", "angle": "Ticket money is split with the film; popcorn and cold drinks are where the hall makes money.", "visual_hooks": ["a tub of popcorn", "a cinema screen", "a ticket counter"], "score": 10, "keywords": ["multiplex popcorn profit", "cinema hall business model", "सिनेमा हॉल कैसे कमाता है"]},
- {"topic": "प्राइवेट स्कूल का पैसा", "category": "Big-Ticket", "setting": "A private school at admission time", "angle": "Admission fees, transport, uniforms and books; schools are trusts, so the money flows in particular, documented ways.", "visual_hooks": ["a school bus", "a stack of uniforms", "a fee receipt"], "score": 8, "keywords": ["private school business model", "school fees explained", "प्राइवेट स्कूल कैसे कमाते हैं"]},
- {"topic": "नेता जी की कमाई: क़ानूनी हिसाब", "category": "Systems Indians Wonder About", "setting": "An MLA's year: salary, allowances, election affidavit", "angle": "Only documented, legal income: salary, allowances, pension and assets declared in public affidavits. No named living person accused of anything.", "visual_hooks": ["a white kurta and a microphone", "an affidavit file", "a car with a flag"], "score": 9, "keywords": ["mla salary india", "politician income legal", "नेता कितना कमाते हैं", "mla salary and allowances"]},
- {"topic": "टोल प्लाज़ा का हिसाब", "category": "Systems Indians Wonder About", "setting": "A national highway toll plaza", "angle": "A private company builds the road and collects toll for years under a contract; traffic is the bet.", "visual_hooks": ["a toll barrier", "a FASTag sticker", "a line of trucks"], "score": 8, "keywords": ["toll plaza income", "toll tax business model", "टोल प्लाज़ा कितना कमाता है"]},
- {"topic": "आईपीएल टीम पैसे कैसे कमाती है", "category": "Systems Indians Wonder About", "setting": "An IPL franchise over one season", "angle": "Central TV rights share, sponsors on jerseys, tickets; the franchise value grows even when the team loses.", "visual_hooks": ["a cricket bat and ball", "a jersey covered in logos", "a stadium crowd"], "score": 10, "keywords": ["ipl team income", "ipl franchise business model", "आईपीएल टीम कैसे कमाती है"]},
- {"topic": "ट्रेन में चाय बेचने का ठेका", "category": "Systems Indians Wonder About", "setting": "Pantry cars and station vendors on Indian Railways", "angle": "Licences and contracts decide who sells; the vendor's cut is small, the contract holder's volume is huge.", "visual_hooks": ["a vendor in a train aisle", "a kettle and cups", "a station platform"], "score": 7, "keywords": ["railway vendor income", "irctc catering contract", "ट्रेन में चाय वाला कितना कमाता है"]},
- {"topic": "यूट्यूबर का पैसा कहाँ से आता है", "category": "Systems Indians Wonder About", "setting": "A Hindi YouTuber's month", "angle": "AdSense is the smallest part; brand deals, affiliate links and their own products are the business.", "visual_hooks": ["a camera on a tripod", "a play button", "a phone with a brand message"], "score": 9, "keywords": ["youtuber income india", "youtube earning explained hindi", "यूट्यूबर कितना कमाते हैं"]},
- {"topic": "हल्दीराम ने भुजिया से साम्राज्य कैसे बनाया", "category": "Famous Brand Money Stories", "setting": "From a Bikaner shop to supermarket shelves", "angle": "A small namkeen shop turned packaged snacks; distribution and packaging did what the shop never could. Company-level facts only.", "visual_hooks": ["a packet of bhujia", "a small old shop", "a supermarket shelf"], "score": 9, "keywords": ["haldiram business model", "haldiram success story hindi", "हल्दीराम कैसे कमाता है"]},
- {"topic": "अमूल: दूध वालों की कंपनी", "category": "Famous Brand Money Stories", "setting": "A village milk collection centre in Gujarat", "angle": "A cooperative: farmers own it, so most of the money goes back to them; scale makes butter cheap.", "visual_hooks": ["a milk can", "a cow", "a butter packet"], "score": 9, "keywords": ["amul business model", "amul cooperative explained", "अमूल कैसे काम करता है"]},
- {"topic": "ज़ोमैटो और स्विगी असल में किससे कमाते हैं", "category": "Famous Brand Money Stories", "setting": "A restaurant tablet and a delivery rider at night", "angle": "Commission from restaurants, delivery and platform fees, ads inside the app; company-level, sourced from public filings.", "visual_hooks": ["a delivery rider on a bike", "a phone with an order", "a restaurant tablet"], "score": 10, "keywords": ["zomato business model", "swiggy commission explained", "ज़ोमैटो कैसे कमाता है"]},
- {"topic": "डीमार्ट हमेशा सस्ता कैसे", "category": "Famous Brand Money Stories", "setting": "A DMart store on a Sunday", "angle": "Owns its stores instead of renting, pays suppliers fast for discounts, sells a narrow range in huge volume.", "visual_hooks": ["a shopping trolley", "a long billing queue", "a store building"], "score": 9, "keywords": ["dmart business model", "dmart cheap price reason", "डीमार्ट सस्ता क्यों है"]},
- {"topic": "पारले-जी पाँच रुपये में कैसे बिकता है", "category": "Famous Brand Money Stories", "setting": "A village shop selling small biscuit packs", "angle": "Tiny margins, enormous volume and a distribution reach into almost every village shop.", "visual_hooks": ["a small biscuit packet", "a village shop", "a delivery van"], "score": 9, "keywords": ["parle g business model", "parle g price strategy", "पारले जी कैसे कमाता है"]},
- {"topic": "मैगी ने भारत को कैसे जीता", "category": "Famous Brand Money Stories", "setting": "Hostel rooms and hill-station stalls", "angle": "Two-minute promise, small packs, and the comeback after the 2015 ban; company-level and regulator facts only.", "visual_hooks": ["a bowl of noodles", "a hostel room", "a mountain stall"], "score": 8, "keywords": ["maggi business strategy", "maggi comeback story", "मैगी कैसे कमाता है"]}
+ {"topic": "पेट्रोल पंप वाला असल में कितना कमाता है", "category": "Dukaan & Retail", "setting": "A highway petrol pump", "myth": "पंप खोल लो, बैठे-बैठे नोट गिनो", "angle": "Of roughly a hundred rupees per litre the dealer keeps only a few rupees of commission; tanker paid in advance, loan EMI and staff eat the rest, so volume and the side business decide everything.", "visual_hooks": ["a fuel nozzle", "a tanker truck", "a cash box"], "score": 10, "keywords": ["petrol pump business profit", "petrol pump kitna kamata hai", "पेट्रोल पंप कितना कमाता है", "petrol pump dealer margin"]},
+ {"topic": "डंपर मालिक असल में कितना कमाता है", "category": "Transport & Heavy Vehicles", "setting": "A tipper truck at a construction site", "myth": "एक डंपर ले लो, रोज़ का पैसा पक्का", "angle": "Down payment, EMI, diesel, driver, tyres and idle days in the rainy season; one bad month can wipe out three good ones.", "visual_hooks": ["a dumper unloading sand", "a diesel pump", "a calendar with rain"], "score": 10, "keywords": ["dumper business in india", "tipper truck income", "डंपर कितना कमाता है", "dumper business profit"]},
+ {"topic": "ढाबे वाला असल में कितना कमाता है", "category": "Khana & Street Food", "setting": "A highway dhaba with truck parking", "myth": "ढाबा चलाना तो आसान है, खाना बनाओ बेचो", "angle": "The dal is the hero, the papad and chai carry the margin, and wasted food goes in the dustbin every night.", "visual_hooks": ["a pot of dal", "a charpai and a truck", "a tandoor"], "score": 10, "keywords": ["dhaba business profit", "dhaba kitna kamata hai", "ढाबा कितना कमाता है", "dhaba business in hindi"]},
+ {"topic": "पोल्ट्री फ़ार्म असल में कितना कमाता है", "category": "Farming & Pashu", "setting": "A broiler shed in a village", "myth": "मुर्गी पालो, चालीस दिन में पैसा", "angle": "Chicks, feed, medicine and the market rate on selling day; one disease or one price crash decides the batch.", "visual_hooks": ["a shed full of chicks", "a feed sack", "a weighing scale"], "score": 10, "keywords": ["poultry farming profit", "poultry farm business", "पोल्ट्री फार्म कितना कमाता है", "murgi palan profit"]},
+ {"topic": "चाय वाला असल में कितना कमाता है", "category": "Khana & Street Food", "setting": "A roadside chai tapri outside a station", "myth": "दस रुपये की चाय, इसमें क्या कमाई", "angle": "A ten-rupee cup costs a few rupees to make; volume and the biscuit counter are the real game.", "visual_hooks": ["a steaming kettle", "a row of small glasses", "a dawn crowd"], "score": 9, "keywords": ["chai wala income", "tea stall business profit", "चाय वाला कितना कमाता है"]},
+ {"topic": "जिम वाला असल में कितना कमाता है", "category": "Services", "setting": "A neighbourhood gym in January and in March", "myth": "जिम में तो भीड़ है, खूब कमाई होगी", "angle": "Yearly memberships sold in January to people who stop coming by March; equipment EMI and rent are the risk.", "visual_hooks": ["a crowded gym", "an empty gym", "a membership card"], "score": 9, "keywords": ["gym business profit", "gym owner income", "जिम वाला कितना कमाता है"]},
+ {"topic": "किराना दुकान वाला असल में कितना कमाता है", "category": "Dukaan & Retail", "setting": "A neighbourhood kirana store", "myth": "दुकान है, ग्राहक आते रहते हैं", "angle": "Thin margins, udhaar to regulars, distributor schemes and a few high-margin items keep it alive against apps.", "visual_hooks": ["shelves of packets", "an udhaar notebook", "a delivery bike"], "score": 9, "keywords": ["kirana store profit", "kirana business margin", "किराना दुकान कितना कमाती है"]},
+ {"topic": "मशरूम की खेती असल में कितना कमाती है", "category": "Farming & Pashu", "setting": "A dark room of mushroom bags", "myth": "छोटे कमरे में लाखों की खेती", "angle": "Low space, fast cycles, but contamination and selling before it spoils decide the profit.", "visual_hooks": ["hanging mushroom bags", "a dark room", "a basket of mushrooms"], "score": 9, "keywords": ["mushroom farming profit", "mushroom ki kheti", "मशरूम की खेती कितना कमाती है"]},
+ {"topic": "ट्रक मालिक असल में कितना कमाता है", "category": "Transport & Heavy Vehicles", "setting": "A truck on a long highway route", "myth": "ट्रक है तो माल है, माल है तो पैसा", "angle": "Freight rate, diesel, toll, driver, empty return trips; the return load is the real profit.", "visual_hooks": ["a loaded truck", "a toll barrier", "an empty truck coming back"], "score": 9, "keywords": ["truck business profit", "transport business in india", "ट्रक मालिक कितना कमाता है"]},
+ {"topic": "मोमो वाला असल में कितना कमाता है", "category": "Khana & Street Food", "setting": "An evening momo cart in a market", "myth": "मोमो का ठेला, छोटा धंधा", "angle": "Cheap flour and filling, fast steaming, and the chutney that brings people back.", "visual_hooks": ["a steamer tower", "a plate of momos", "an evening queue"], "score": 9, "keywords": ["momo business profit", "momo stall income", "मोमो वाला कितना कमाता है"]},
+ {"topic": "नाई की दुकान असल में कितना कमाती है", "category": "Services", "setting": "A small barber shop", "myth": "कटिंग से कितना कमा लेगा", "angle": "Haircuts fill the day, but shaves, facials, chair rent and Sunday rush make the month.", "visual_hooks": ["a barber chair", "scissors and comb", "a Sunday queue"], "score": 8, "keywords": ["salon business profit", "barber shop income", "नाई कितना कमाता है"]},
+ {"topic": "मछली पालन असल में कितना कमाता है", "category": "Farming & Pashu", "setting": "A village fish pond", "myth": "तालाब में मछली डालो, बड़ी होगी, बेचो", "angle": "Seed fish, feed, oxygen and the one hot night that can kill a pond.", "visual_hooks": ["a pond", "a fishing net", "a feed bag"], "score": 8, "keywords": ["fish farming profit", "machli palan", "मछली पालन कितना कमाता है"]},
+ {"topic": "जेसीबी किराए पर देने वाला कितना कमाता है", "category": "Transport & Heavy Vehicles", "setting": "A JCB on hourly rent", "myth": "जेसीबी घंटे के हिसाब से, पैसा ही पैसा", "angle": "Hourly rent looks huge; EMI, operator, diesel and idle days tell the real story.", "visual_hooks": ["a JCB digging", "a clock", "an operator cabin"], "score": 8, "keywords": ["jcb business profit", "jcb rent per hour", "जेसीबी कितना कमाता है"]},
+ {"topic": "पानी पूरी वाला असल में कितना कमाता है", "category": "Khana & Street Food", "setting": "An evening golgappa cart", "myth": "पानी पूरी का ठेला, दो पैसे की कमाई", "angle": "Ingredients cost little; plates per hour and a loyal evening crowd decide the day.", "visual_hooks": ["a cart with a pot of pani", "hands filling puris", "a queue"], "score": 8, "keywords": ["pani puri business profit", "golgappa income", "पानी पूरी वाला कितना कमाता है"]},
+ {"topic": "मेडिकल स्टोर असल में कितना कमाता है", "category": "Dukaan & Retail", "setting": "A chemist shop near a hospital", "myth": "दवाई तो हर कोई खरीदता है", "angle": "Branded vs generic margins, expiry losses and the doctor nearby decide the business.", "visual_hooks": ["shelves of medicine boxes", "a prescription slip", "a hospital gate"], "score": 8, "keywords": ["medical store profit", "medical shop margin", "मेडिकल स्टोर कितना कमाता है"]},
+ {"topic": "कबाड़ीवाला असल में कितना कमाता है", "category": "Recycling & Small Industry", "setting": "A kabadi godown", "myth": "कबाड़ में क्या रखा है", "angle": "Buy cheap by the kilo, sort, sell by material to bigger dealers; sorting is the secret.", "visual_hooks": ["a scale with scrap", "piles of paper and metal", "a cycle cart"], "score": 9, "keywords": ["kabadi business profit", "scrap business in india", "कबाड़ीवाला कितना कमाता है"]},
+ {"topic": "डेयरी फ़ार्म असल में कितना कमाता है", "category": "Farming & Pashu", "setting": "A small dairy with ten buffaloes", "myth": "भैंस रखो, रोज़ दूध, रोज़ पैसा", "angle": "Feed is most of the cost; dry months, vet bills and the milk rate decide the profit.", "visual_hooks": ["a buffalo", "a milk can", "a fodder pile"], "score": 8, "keywords": ["dairy farming profit", "dairy business", "डेयरी फार्म कितना कमाता है"]},
+ {"topic": "टेंट हाउस वाला असल में कितना कमाता है", "category": "Services", "setting": "A tent house godown in wedding season", "myth": "शादी का सीज़न, बस तीन महीने का काम", "angle": "Buy once, rent a hundred times; the off-season and damage decide the year.", "visual_hooks": ["a folded shamiana", "stacked chairs", "a loaded truck"], "score": 8, "keywords": ["tent house business profit", "tent house income", "टेंट हाउस कितना कमाता है"]},
+ {"topic": "ई-रिक्शा वाला दिन में कितना बचाता है", "category": "Transport & Heavy Vehicles", "setting": "An e-rickshaw on a city route", "myth": "बैटरी से चलता है, खर्चा ही नहीं", "angle": "Battery charging, daily rent if not owned, battery replacement after a year or two.", "visual_hooks": ["an e-rickshaw", "a charging point", "a battery"], "score": 8, "keywords": ["e rickshaw income", "e rickshaw business profit", "ई रिक्शा कितना कमाता है"]},
+ {"topic": "लॉन्ड्री वाला असल में कितना कमाता है", "category": "Services", "setting": "A neighbourhood laundry and press shop", "myth": "कपड़े धोने में क्या कमाई", "angle": "Per-piece pricing, electricity, and the press that earns more than the machine.", "visual_hooks": ["a pile of clothes", "an iron", "a washing machine"], "score": 7, "keywords": ["laundry business profit", "dhobi income", "लॉन्ड्री कितना कमाती है"]},
+ {"topic": "कोल्ड स्टोरेज असल में कितना कमाता है", "category": "Recycling & Small Industry", "setting": "A potato cold storage", "myth": "बस गोदाम ठंडा रखो, किराया लो", "angle": "Rent per sack per season, electricity bills, and the years when prices crash and farmers abandon stock.", "visual_hooks": ["sacks of potatoes", "a big cold room", "an electricity meter"], "score": 8, "keywords": ["cold storage business profit", "cold storage income", "कोल्ड स्टोरेज कितना कमाता है"]},
+ {"topic": "जूस वाला असल में कितना कमाता है", "category": "Khana & Street Food", "setting": "A summer juice stall", "myth": "गर्मी में खूब बिकता है", "angle": "Fruit wastage, ice and the three summer months that pay for the whole year.", "visual_hooks": ["a juicer", "a pile of oranges", "a glass with ice"], "score": 7, "keywords": ["juice shop profit", "juice business income", "जूस वाला कितना कमाता है"]},
+ {"topic": "हार्डवेयर की दुकान असल में कितना कमाती है", "category": "Dukaan & Retail", "setting": "A hardware shop near new construction", "myth": "पेंच-कील बेचकर क्या कमाएगा", "angle": "Small items carry big margins, contractors buy on credit, construction booms decide the year.", "visual_hooks": ["a box of screws", "paint cans", "a contractor with a list"], "score": 7, "keywords": ["hardware shop profit", "hardware business", "हार्डवेयर दुकान कितना कमाती है"]},
+ {"topic": "मोबाइल रिपेयर वाला असल में कितना कमाता है", "category": "Services", "setting": "A mobile repair counter", "myth": "छोटा काउंटर, छोटी कमाई", "angle": "Screen swaps and accessories sold to every walk-in carry the margin.", "visual_hooks": ["a cracked screen", "a tiny screwdriver", "a wall of covers"], "score": 7, "keywords": ["mobile repair shop income", "mobile repair business", "मोबाइल रिपेयर कितना कमाता है"]},
+ {"topic": "बकरी पालन असल में कितना कमाता है", "category": "Farming & Pashu", "setting": "A goat farm before Eid", "myth": "बकरी पालो, बकरीद पर बेचो", "angle": "Feed, shelter and disease all year; one festival season decides the price.", "visual_hooks": ["a goat", "a fodder bundle", "a village market"], "score": 8, "keywords": ["goat farming profit", "bakri palan", "बकरी पालन कितना कमाता है"]},
+ {"topic": "ट्रैक्टर किराए पर देने वाला कितना कमाता है", "category": "Transport & Heavy Vehicles", "setting": "A tractor rented by the hour at sowing time", "myth": "खेती के सीज़न में खूब काम", "angle": "Two short seasons of demand, EMI all year, and implements that earn extra.", "visual_hooks": ["a tractor in a field", "a plough", "a calendar"], "score": 7, "keywords": ["tractor rent business", "tractor income", "ट्रैक्टर किराया कितना कमाता है"]},
+ {"topic": "ज्वेलर सोने पर कैसे कमाता है", "category": "Dukaan & Retail", "setting": "A family jewellery shop before Dhanteras", "myth": "सोना महँगा, तो ज्वेलर अमीर", "angle": "Making charges, wastage and exchange offers; the gold price itself is not the margin.", "visual_hooks": ["a gold necklace", "a small weighing scale", "an old ring"], "score": 8, "keywords": ["jeweller profit", "making charges explained", "ज्वेलर कितना कमाता है"]},
+ {"topic": "प्लास्टिक रीसाइक्लिंग असल में कितना कमाती है", "category": "Recycling & Small Industry", "setting": "A small plastic recycling unit", "myth": "कचरे से सोना", "angle": "Buying sorted plastic, shredding, granules; electricity and steady supply decide the margin.", "visual_hooks": ["a sack of bottles", "a shredder", "a pile of granules"], "score": 8, "keywords": ["plastic recycling business", "plastic recycling plant profit", "प्लास्टिक रीसाइक्लिंग कितना कमाती है"]},
+ {"topic": "आटा चक्की वाला असल में कितना कमाता है", "category": "Recycling & Small Industry", "setting": "A village flour mill", "myth": "चक्की तो चलती रहती है", "angle": "Per-kilo grinding charge, electricity, and packaged flour as the bigger opportunity.", "visual_hooks": ["a flour mill", "a sack of wheat", "a bag of atta"], "score": 7, "keywords": ["atta chakki business profit", "flour mill income", "आटा चक्की कितना कमाती है"]},
+ {"topic": "रेस्टोरेंट वाले असल में कैसे कमाते हैं", "category": "Khana & Street Food", "setting": "A mid-size family restaurant", "myth": "खाना महँगा, तो मुनाफ़ा भी बड़ा", "angle": "Food is not the profit centre; drinks, desserts, menu design and table turnover are.", "visual_hooks": ["a menu card", "a cold drink bottle", "a table cleared fast"], "score": 9, "keywords": ["restaurant business profit", "restaurant owner income", "रेस्टोरेंट कितना कमाता है"]},
+ {"topic": "वेडिंग प्लानर असल में कितना कमाता है", "category": "Services", "setting": "A big Indian wedding", "myth": "शादी में तो लाखों का खेल", "angle": "A fee on top plus commissions from venues, decorators and caterers.", "visual_hooks": ["a mandap", "a phone with vendor calls", "a flower arch"], "score": 7, "keywords": ["wedding planner income", "wedding planner business", "वेडिंग प्लानर कितना कमाता है"]},
+ {"topic": "नेता जी की कमाई: क़ानूनी हिसाब", "category": "Neta & System", "setting": "An MLA's year: salary, allowances, election affidavit", "myth": "नेता बनते ही पैसा", "angle": "Only documented, legal income: salary, allowances, pension, assets declared in public affidavits. No named living person accused of anything.", "visual_hooks": ["a microphone", "an affidavit file", "a car with a flag"], "score": 7, "keywords": ["mla salary india", "politician income", "नेता कितना कमाते हैं"]}
 ]}
 ```
 
@@ -2035,7 +2222,11 @@ You are the sole producer, scriptwriter, scene director and editor of one Hindi 
 
 ## The one thing that matters most
 
-Story, not math. A viewer should feel they stood inside the chai tapri, the gym, the wedding tent. At most one or two simple rupee figures per section, said the way people talk. If a sentence sounds like an accounts class, rewrite it as something that happens to someone.
+Hisaab, told as a story. Break the myth everyone believes ("पंप खोल लो, बैठे-बैठे नोट गिनो") with simple money facts carried by a character (रमेश, introduced with "मान लीजिए"): one rupee number per beat, named costs (EMI, rent, diesel, staff), no formulas, no tables. If a sentence sounds like an accounts class, rewrite it as something that happens to रमेश.
+
+## What wins (competitor research, 2026-10-01)
+
+Two comparable Hindi channels grew fast on boring, hyper-local cash businesses (petrol pump 720K views, dumper 241K, poultry 69K, dhaba 62K) while abstract topics flopped (UPI, IPL, coaching, railways: under 2K). Same title template and same infographic thumbnail on every video. Stay in the six verticals of `topic-strategy.md`.
 
 ## Brand invariants
 
@@ -2049,7 +2240,7 @@ Story, not math. A viewer should feel they stood inside the chai tapri, the gym,
 | Runtime | 180-300 s, target 240. Hard cap 300 s. |
 | Aspect | 16:9, 1920x1080. |
 | Audio | No music. Whoosh on scene cuts, reveal sting on [RAAZ], sparse money/food/market cues. |
-| Thumbnail | `scripts/make_thumbnail.py`: 2-4 Devanagari words, gold accent word (usually a ₹ figure), gold frame. |
+| Thumbnail | `scripts/make_thumbnail.py` "hisaab" infographic: "<X> का हिसाब" title band, the scene in the centre, 3-4 money notes with gold arrows, gold frame. Same every episode. |
 
 ## Workspace
 
@@ -2085,7 +2276,7 @@ Topics, counters and episode records live in MongoDB (`scripts/state_db.py`, db 
 3. Scenes 5-7 s each.
 4. Every rupee figure, date and "first" claim traces to `01_research/sources.md`, or is said as an estimate ("अंदाज़न", "लगभग") with a round range.
 5. First sentence: a rupee shock or a question. The [RAAZ] secret is teased in [HOOK] and paid off.
-6. Thumbnail beat (default 1) has its subject on the right, empty space on the left. Title and thumbnail promise exactly what the video delivers.
+6. Thumbnail beat (default 1) shows the boss at the business with the subject centred and empty space left and right (for the annotations). Title follows the series template; title and thumbnail promise exactly what the video delivers.
 7. `metadata.json` complete (see `publishing-and-metadata.md`).
 8. Captions legible; ambience never masks the voice.
 
@@ -2133,37 +2324,38 @@ The script is the video. Assume the viewer's thumb is over the back button the w
 
 - **Length:** about 480-600 Hindi words for 240 s (`hi-IN-MadhurNeural` speaks ~140 words/min). `stitch_audio.py` fails over 300 s or under 180 s: trim or add, never speed the voice.
 - **Language:** conversational Hindi in Devanagari, the way people talk at a chai stall, not textbook shuddh Hindi. English business words stay English but in Devanagari: प्रॉफ़िट, मार्जिन, कस्टमर, ब्रांड.
-- **Numbers as words:** "दस रुपये", "पचास हज़ार", "दो लाख". Never digits (`check_script.py` rejects them). Rupee figures: one or two per section, round, simple.
+- **Numbers as words:** "दस रुपये", "पचास हज़ार", "दो लाख". Never digits (`check_script.py` rejects them).
+- **Hisaab, not math:** one rupee number per beat, carried by the character. Named costs (ईएमआई, किराया, डीज़ल, स्टाफ़, बिजली) are good. No formulas, no stacked percentages, no tables.
 - **Voice:** second person, present tense. "आप सुबह पाँच बजे दुकान खोलते हैं..." beats "दुकानदार सुबह दुकान खोलता था".
 - **Sentences:** short. Vary rhythm. A three-word line after a long one lands hard: "और यहीं है खेल।"
 - **No filler:** no "नमस्कार दोस्तों", no "आज के इस वीडियो में", no channel intro. They cost the seconds you can least afford.
-- **No math:** no percentages stacked on percentages, no formulas, no tables. If a number needs a calculation to understand, replace it with a comparison ("एक कप पर जितना कमाता है, उतने में आपका बिस्कुट आता है").
+- **No calculations on screen or in speech:** if a number needs a calculation to understand, replace it with a comparison ("एक कप पर जितना कमाता है, उतने में आपका बिस्कुट आता है").
 
 ## Structure
 
-### [HOOK] (0:00-0:20)
-First sentence is a rupee shock or a question. Then tease the secret: "और आख़िर में वो एक ट्रिक, जिससे असली पैसा बनता है।" Patterns:
-- **Rupee shock:** "एक कप चाय दस रुपये की। बनाने में लगते हैं सिर्फ़ तीन।"
-- **You've been paying:** "हर जनवरी आप जिम की सालभर की फ़ीस भरते हैं। और जिम वाला यही चाहता है।"
-- **The question:** "रोज़ सौ प्लेट बेचने वाला पानी पूरी वाला महीने में कितना बचाता है?"
+### [HOOK] (0:00-0:20) -- myth, then one number
+Open on the belief everyone has, then break it with one number, then tease the secret:
+- "पेट्रोल पंप खोल लो, बैठे-बैठे नोट गिनो... सुनने में कितना आसान लगता है ना?"
+- "पर पंचानवे रुपये के पेट्रोल में मालिक को मिलते हैं सिर्फ़ साढ़े चार रुपये।"
+- "और आख़िर में वो एक बात, जिस पर पूरा धंधा टिका है।"
 
-### [DUNIYA] (0:20-1:00)
-The world: who this person is, their day, and what everyone *thinks* they earn. Put the viewer there: "आपने भी देखा होगा..."
+### [DUNIYA] (0:20-1:00) -- the character and the setup
+Introduce a hypothetical owner with a common name, always as an example: "मान लीजिए रमेश..." (never presented as a real person). What he invests, where, why he started. Put the viewer there: "आपने भी देखा होगा..."
 
-### [KHEL] (1:00-3:00)
-The game: three or four money streams, each a small scene with a person (a customer, a supplier, a deal). Each stream ends on a small turn. One simple rupee figure per stream, at most.
+### [KHEL] (1:00-3:00) -- पैसा कहाँ बनता है, कहाँ डूबता है
+First the money coming in, then the leaks: EMI, rent, staff, bijli, diesel, wastage, udhaar. Each leak is a small scene with रमेश and one rupee number. Include one comparison (highway vs gaon, small vs big, good month vs bad month).
 
-### [RAAZ] (3:00-3:45)
-The secret trick: the one non-obvious move that makes the real money (gym memberships people never use, popcorn not tickets, the shamiana rented a hundred times). This is what gets shared. Slow down. Pay off the hook's tease explicitly.
+### [RAAZ] (3:00-3:45) -- the hero product or the hidden twist
+The one non-obvious thing the business really runs on: the dal that carries the dhaba, the papad bought at डेढ़ रुपये and sold at दस, the tanker that must be paid before a single litre is sold, the one bad month that sinks a dumper owner. Slow down. Pay off the hook's tease explicitly.
 
-### [SABAK] (last 20-40 s)
-Loop back to the hook's exact image. One takeaway line. One specific comment question ("आपके शहर में एक कप चाय कितने की है?"). Name the next episode ("अगली बार: जिम वाले का असली खेल"). Ask for the subscribe once, about the series: "ऐसे ही हर धंधे का असली खेल जानने के लिए चैनल सब्सक्राइब कीजिए।"
+### [SABAK] (last 20-40 s) -- rules and the payoff
+Two or three simple rules (मेन्यू छोटा रखो, इमरजेंसी फ़ंड, बार-बार आने वाला ग्राहक मार्जिन से बड़ा). The payoff line: "ये धंधा पेट्रोल का नहीं, कैश-फ़्लो और भरोसे का है।" One specific comment question ("आपके शहर में एक प्लेट मोमो कितने की है?"). Name the next episode ("अगली बार: डंपर वाले का पूरा हिसाब"). Ask for the subscribe once, about the series.
 
 ## Retention rules
 
 - Mark the script every 30 seconds (~70 words). At each mark ask: what changed? If nothing, add a turn, a question to the viewer, a new character or a new place.
 - Never stack two abstract lines without something the stickman can act out.
-- Kill the second-best example. Three great money streams beat five okay ones.
+- Kill the second-best example. Three great leaks beat five okay ones.
 - Every estimate is said as one: "अंदाज़न", "लगभग", with a round range.
 
 ## Format of `02_script/script.md`
@@ -2173,8 +2365,8 @@ Loop back to the hook's exact image. One takeaway line. One specific comment que
 Target runtime: 4:00
 
 [HOOK]
-1. एक कप चाय दस रुपये की। बनाने में लगते हैं सिर्फ़ तीन।
-2. पर असली कमाई चाय से नहीं होती। वो राज़ आख़िर में।
+1. दस रुपये की चाय, इसमें क्या कमाई... सुनने में तो यही लगता है ना?
+2. पर बनाने में लगते हैं सिर्फ़ तीन रुपये। और असली कमाई चाय से होती भी नहीं। वो राज़ आख़िर में।
 
 [DUNIYA]
 3. ...
@@ -2201,36 +2393,40 @@ Overwrite `references/topic-strategy.md`:
 
 ## What belongs on this channel
 
-"Kaise kamata hai?" -- how a business or person every Indian has met actually makes money. The test: would an ordinary viewer say "हाँ, ये तो मैंने हर रोज़ देखा है" and then "अरे, ऐसे कमाता है?" Both reactions are required.
+"Kaise kamata hai?" for **boring, hyper-local, cash businesses from Bharat**: the businesses every Indian passes daily, where everyone has a guess and nobody has a good video. The test: is there a myth ("बैठे-बैठे नोट गिनो") that simple hisaab overturns?
 
-## Categories (rotate; `category` is required by `state_db.py topic-add`)
+Evidence (operator's research, 2026-10-01): comparable channels' breakouts were petrol pump (720K, 65x average), dumper (241K), poultry (69K), dhaba (62K), mushroom (60K), kirana (44K), transport (42K). Abstract or distant topics flopped: UPI 673, IPL 688, coaching 809, luxury 903, cashback 918, railways 1.7K, black money 2.1K. Do not queue apps, finance concepts, sports leagues, luxury or government systems.
 
-1. **Street & Local** -- chai tapri, pani puri, dhaba, kirana, auto, dabbawala.
-2. **Small Business** -- restaurant, cloud kitchen, gym, salon, coaching, PG, repair shop, sweet shop.
-3. **Big-Ticket** -- wedding planner, tent house, jeweller, broker, petrol pump, cinema hall, private school.
-4. **Systems Indians Wonder About** -- politician (legal income only), toll plaza, IPL team, railway vendors, YouTuber.
-5. **Famous Brand Money Stories** -- Haldiram's, Amul, Zomato/Swiggy, DMart, Parle-G, Maggi. Company-level facts only.
+## Verticals (the `category` field; each is a YouTube playlist)
 
-Never two episodes in a row from the same category.
+1. **Farming & Pashu** -- poultry, mushroom, fish, dairy, goat, bee-keeping.
+2. **Transport & Heavy Vehicles** -- dumper/tipper, truck, JCB, tractor rental, school van, e-rickshaw.
+3. **Khana & Street Food** -- chai, momo, pani puri, dhaba, juice, sweet shop, restaurant.
+4. **Dukaan & Retail** -- kirana, petrol pump, medical store, hardware, jeweller.
+5. **Services** -- barber, laundry, gym, tent house, mobile repair, wedding planner.
+6. **Recycling & Small Industry** -- kabadiwala, plastic recycling, cold storage, atta chakki, brick kiln.
+7. **Neta & System** -- the politician episode only (legal income, `compliance-and-safety.md`); not before episode 10.
+
+Never two episodes in a row from the same vertical. Farming and heavy vehicles drew most of one competitor's views: keep at least one of every three episodes in those two.
 
 ## Scoring (1-10 each, average, queue at 7.0+)
 
-- **Relatability** -- does every Indian know this person or brand?
-- **Money surprise** -- is there a "wait, really?" fact for [RAAZ]?
-- **Search demand** -- do people type "X kitna kamata hai" / "X business model"? Check YouTube's search suggestions.
+- **Relatability** -- does every Indian pass this business?
+- **Myth gap** -- is there a belief the hisaab overturns, and a [RAAZ] twist?
+- **Search demand** -- do people type "X business profit" / "X kitna kamata hai"? Check YouTube search suggestions.
 - **Visual** -- can the boss stickman act it out with one or two props?
 
 ## Series chaining
 
-Each episode's [SABAK] names the next topic. Pick that topic next unless it fails compliance. Keep a 3-4 episode arc inside a category when it flows (dhaba -> restaurant -> cloud kitchen -> Zomato).
+Each [SABAK] names the next topic; pick it next unless it breaks the vertical rotation or compliance.
 
-## Keywords
+## Keywords and myth
 
-Every topic carries `keywords`: 3-5 query phrases mixing Roman Hinglish, Devanagari and English ("chai wala income", "चाय वाला कितना कमाता है", "tea stall business profit"). Copy them into `topic.json`; the main one goes in the title and the hook.
+Every topic carries `keywords` (3-5 query phrases mixing Hinglish, Devanagari and English) and `myth` (the belief the hook breaks). Copy both into `topic.json`.
 
 ## Refilling the bank
 
-When `topics-count` shows fewer than 8 queued, add topics with `python3 scripts/state_db.py topic-add` (JSON list on stdin) until more than 15 are queued. Each item: `topic` (Devanagari), `category`, `setting`, `angle`, `visual_hooks` (3), `score`, `keywords` (3-5). Never a topic already used; never a living person in a critical light.
+When `topics-count` shows fewer than 8 queued, add topics with `python3 scripts/state_db.py topic-add` (JSON list on stdin) until more than 15 are queued. Each item: `topic` (Devanagari, "<X> असल में कितना कमाता है"), `category` (a vertical above), `setting`, `myth`, `angle`, `visual_hooks` (3), `score`, `keywords` (3-5). Never a topic already used.
 ```
 
 - [ ] **Step 7: Write `thumbnail-and-metadata.md` (SEO)**
@@ -2240,55 +2436,60 @@ Overwrite `references/thumbnail-and-metadata.md`:
 ````markdown
 # Thumbnail, title, metadata and SEO
 
-Packaging decides whether the video is clicked; retention decides whether YouTube shows it to more people. Never trade one for the other: no promise the video does not keep.
+Packaging decides whether the video is clicked; retention decides whether YouTube shows it to more people. Never trade one for the other: no promise the video does not keep. Same template every episode, so the series is recognisable.
 
-## Thumbnail (`scripts/make_thumbnail.py`, run by `run_episode.py`)
+## Thumbnail: the "hisaab" infographic (`scripts/make_thumbnail.py`, run by `run_episode.py`)
 
-- 1280x720; the hook scene full-bleed (`thumbnail_beat`, default 1), 2-4 Devanagari words in huge white type with a thick black outline on the left, one accent word in gold, gold frame.
-- The accent word is usually the rupee hook: "₹70?", "₹40 लाख?", "करोड़ों?". The figure must be in `sources.md` or said in the video as an estimate.
-- Text formulas: the rupee question ("चाय में ₹70?"), the secret ("असली खेल"), the reversal ("खाली जिम = पैसा"), the scale ("एक डील = साल भर").
-- Write beat 1's scene with the subject on the right and empty space on the left.
-- Legibility: open `thumbnail-210x118-preview.png`; if the words aren't readable at that size, cut a word.
+- White whiteboard, gold frame. Title band on top: `thumbnail_text` = "<X> का हिसाब" (2-4 Devanagari words), `thumbnail_accent_word` = "हिसाब" or the business name, drawn in gold, gold underline.
+- Centre: the thumbnail scene (`thumbnail_beat`, default 1): the boss at the business, subject centred, empty space left and right.
+- `thumbnail_annotations`: 3-4 money notes, each 2-3 words, ~12 characters max, placed left and right with gold arrows: "₹4.5/लीटर", "पहले पेमेंट", "लोन ईएमआई", "दाल = हीरो", "बर्बादी ₹2,500/दिन". Digits and ₹ are fine; **no Latin letters** (the font has none; the script refuses them): write ईएमआई, not EMI. Every figure must be in `sources.md` or said in the video as an estimate.
+- Legibility: open `thumbnail-210x118-preview.png`; if the title band isn't readable at that size, shorten it.
 
-## Title
+## Title: one series template
 
-- **Hybrid script:** Devanagari Hindi plus the English/Hinglish search phrase, because Indian viewers search in Roman Hinglish. Example: `Restaurant वाले असल में कैसे कमाते हैं? | Business Model in Hindi`.
-- 45-70 characters, main keyword in the first half, one question mark at most.
-- Formulas: "X असल में कैसे कमाता है?", "X का असली खेल", "₹N की X -- सच क्या है?", "X आपसे कैसे कमाता है (legally)".
-- Write three candidates; the best goes in `title`, the other two in `title_alternates` for YouTube's Test & Compare.
+`<X> वाला असल में कितना कमाता है? | <X in English> Business Profit in Hindi`
+
+e.g. `पेट्रोल पंप वाला असल में कितना कमाता है? | Petrol Pump Business Profit in Hindi`. Adapt the Devanagari half to the business ("<X> असल में कितना कमाता है?", "<X> की असली कमाई?"), keep the English half. 45-80 characters. Put two variations in `title_alternates` for YouTube's Test & Compare.
 
 ## Description
 
 ```
-[Hook in Hindi + the main Hinglish search phrase, within the first 150 characters.]
+[Myth hook in Hindi + the main Hinglish search phrase, within the first 150 characters.]
 
 [2-3 Hindi sentences on what the video reveals, without giving away the RAAZ.]
 
 ⏱️ Chapters
 0:00 [hook label in Hindi]
-0:xx दुनिया
-0:xx खेल
-0:xx राज़
+0:xx रमेश की कहानी
+0:xx पैसा कहाँ बनता है, कहाँ डूबता है
+0:xx असली राज़
 0:xx सबक
+
+🔍 आपके सवाल (Your Queries):
+[15-20 search phrases, one per line: Hinglish, Devanagari and English variants]
 
 📚 Sources
 - [source] -- [URL]
 
-🎩 Mafia of Business -- हर धंधे का असली खेल, हिंदी में।
+🎩 Mafia of Business -- हर धंधे का असली हिसाब, हिंदी में।
 
 #MafiaOfBusiness #BusinessModel #[TopicHashtag]
 ```
 
-Chapters come from `03_audio/timings.json` section start times; at least four, first at 0:00 (shows as key moments in Google). Leave out subscribe/playlist links; the operator adds them.
+Chapters come from `03_audio/timings.json` section start times; at least four, first at 0:00. Leave out subscribe/playlist links; the operator adds them.
 
 ## Tags
 
-10-15: the main query in Hinglish, Devanagari and English variants ("chai wala income", "चाय वाला कितना कमाता है", "tea stall business profit"), common misspellings, plus series terms ("business model in hindi", "how they make money hindi", "Mafia of Business").
+15-25, within YouTube's 500-character limit: the main query in Hinglish, Devanagari and English ("petrol pump kitna kamata hai", "पेट्रोल पंप कितना कमाता है", "petrol pump business profit"), cost/investment variants ("petrol pump investment", "petrol pump dealer margin"), common misspellings, and series terms ("business model in hindi", "Mafia of Business").
+
+## Playlist
+
+`playlist` = the topic's vertical (`topic-strategy.md`). `posting.md` tells the operator which playlist to add the video to.
 
 ## Engagement package (in `metadata.json`, copied into `posting.md`)
 
 - `pinned_comment`: a bonus fact plus a question, in Hindi.
-- `community_post`: a one-line poll ("चाय वाला महीने में कितना कमाता है? A) 15k B) 50k C) 1 लाख+").
+- `community_post`: a one-line poll ("पेट्रोल पंप मालिक को एक लीटर पर कितना मिलता है? A) ₹20 B) ₹10 C) ₹5 से कम").
 - `shorts_hook`: `{"start": 0.0, "end": <end of the last [HOOK] or first [DUNIYA] beat, 30-55 s>}` from `timings.json`, for a hand-cut Short.
 ````
 
@@ -2305,13 +2506,15 @@ The pipeline never posts anywhere. `run_episode.py` ends with `finalize_episode.
 
 | Field | Rule |
 |---|---|
-| `title` | Required. Hybrid Devanagari + Hinglish keyword, 45-70 chars (see `thumbnail-and-metadata.md`). |
+| `title` | Required. The series template, 45-80 chars (see `thumbnail-and-metadata.md`). |
 | `title_alternates` | The two rejected candidate titles. |
-| `description` | Hook with the search phrase in the first 150 chars, summary, chapters, sources, channel line, 3 hashtags. |
-| `tags` | 10-15, Hinglish + Devanagari + English variants. |
+| `description` | Myth hook with the search phrase in the first 150 chars, summary, chapters, "🔍 आपके सवाल" block, sources, channel line, 3 hashtags. |
+| `tags` | 15-25, Hinglish + Devanagari + English variants, under 500 characters. |
 | `thumbnail_text` | 2-4 Devanagari words. Without it no thumbnail is made and finalize fails. |
 | `thumbnail_accent_word` | One word from `thumbnail_text`, drawn in gold. |
-| `thumbnail_beat` | Scene number for the thumbnail background (default 1). |
+| `thumbnail_beat` | Scene number for the thumbnail centre (default 1). |
+| `thumbnail_annotations` | 3-4 money notes, Devanagari + digits/₹ only (see `thumbnail-and-metadata.md`). |
+| `playlist` | The topic's vertical. |
 | `pinned_comment` | Bonus fact + question, Hindi. |
 | `community_post` | One-line poll, Hindi. |
 | `shorts_hook` | `{"start": s, "end": s}` from `timings.json`. |
@@ -2379,6 +2582,11 @@ The `image_prompt_suffix` in `channel_state.json` is prepended to every prompt. 
 - Only legal, documented income: salary, allowances, pension, assets declared in public election affidavits, aggregate reports (e.g. ADR analyses).
 - No named living person is accused of anything. Corruption appears only as reported, sourced, aggregate facts, called "आरोप" when it is an allegation.
 
+## Hypothetical characters
+
+- रमेश, राजू, शर्मा जी are examples. Introduce them with "मान लीजिए" and never present them as real people or real interviews.
+- Their numbers come from `sources.md` (or are said as estimates with a range).
+
 ## "Mafia" is a metaphor
 
 - No glorifying real crime; no how-to for fraud, tax evasion, adulteration or cheating customers.
@@ -2415,7 +2623,7 @@ The pipeline has no YouTube data, and the agent never invents performance number
 
 ## For the operator (outside the pipeline)
 
-Post on a fixed schedule at 6-9 PM IST; cut a Short from `shorts_hook`; keep every episode in the "Kaise Kamata Hai" playlist; pin the comment early; post the community poll; reply to early comments; after 48 hours, if CTR is low, try a `title_alternates` entry via Test & Compare.
+Post on a fixed schedule at 6-9 PM IST; cut a Short from `shorts_hook`; add every episode to its vertical's playlist; pin the comment early; post the community poll; reply to early comments; after 48 hours, if CTR is low, try a `title_alternates` entry via Test & Compare.
 ```
 
 - [ ] **Step 10: Edit the kept references**
@@ -2423,7 +2631,7 @@ Post on a fixed schedule at 6-9 PM IST; cut a Short from `shorts_hook`; keep eve
 For each file below, apply exactly these edits (read the file first; keep everything else):
 
 - `research-and-facts.md`: replace any channel name with "Mafia of Business"; replace mystery/legend wording with: "Sources for money facts: annual reports, company filings, government data (e.g. MyNeta/ADR affidavit summaries, ministry pages), reputable business press, documented interviews. Typical costs and prices for street businesses may come from several news features or documented vendor interviews; record each as an estimate with its basis." Keep the rule that `01_research/sources.md` is required.
-- `visuals-and-animation.md`: replace `red`/`red-fedora` with the boss description from `character-bible.md`; replace "6-10 s" with "5-7 s"; add "Indian settings (chai stall, dhaba, mandi, auto-rickshaw, wedding tent, gym) as one or two simple props." Remove any raphael mention.
+- `visuals-and-animation.md`: replace `red`/`red-fedora` with the boss description from `character-bible.md`; replace "6-10 s" with "5-7 s"; add "Indian settings (petrol pump, dhaba, poultry shed, dumper, kirana, gym) as one or two simple props." Replace any thumbnail-beat composition rule with "the thumbnail beat (default 1) shows the boss at the business, subject centred, empty space left and right for the annotations". Remove any raphael mention.
 - `ambience-sound.md`: replace section names with `hook/duniya/khel/raaz/sabak`, `climax_reveal` with `raaz`, and the keyword list with the Devanagari stems from `channel_state.json` (`coin_clink`, `cash_register`, `sizzle`, `crowd_murmur`, `paper_rustle`); note "`*` = prefix match on NFC-normalized Devanagari, matras kept."
 - `captions.md`: font Noto Sans Devanagari, gold highlight `&H0017A0D4`, 2-4 words per caption, danda dropped from display, no uppercase.
 - `edit-and-assembly.md`: output `07_edit/mafia-of-business-<slug>.mp4`; target 240 s.
@@ -2450,7 +2658,7 @@ FILE RULES: use `.scratch/` in this directory for temporary files.
 
 2. Run `python3 scripts/state_db.py topics-count`. If `queued` is under 8, refill per topic-strategy.md's "Refilling the bank" until above 15.
 
-3. Pick the next topic per topic-strategy.md (prefer the topic the previous episode's [SABAK] promised; never the same category twice in a row: `python3 scripts/state_db.py recent 3`). Slug: `YYYY-MM-DD-<short-english-slug>`. Research first: `episodes/<slug>/01_research/sources.md` per research-and-facts.md. Then write `topic.json` (with `keywords`), `02_script/script.md` + `shotlist.json` (script-formula.md, Hindi, tags [HOOK] [DUNIYA] [KHEL] [RAAZ] [SABAK], numbers as words, ~480-600 words), and run `python3 scripts/check_script.py <slug>` until it prints `script.md ok`. Write `03_audio/chunk_plan.json` (voice-and-audio.md). Check compliance-and-safety.md. Mark the topic used: `python3 scripts/state_db.py topic-use "<topic>"`.
+3. Pick the next topic per topic-strategy.md (prefer the topic the previous episode's [SABAK] promised; never the same vertical twice in a row: `python3 scripts/state_db.py recent 3`). Slug: `YYYY-MM-DD-<short-english-slug>`. Research first: `episodes/<slug>/01_research/sources.md` per research-and-facts.md. Then write `topic.json` (with `keywords` and `myth`), `02_script/script.md` + `shotlist.json` (script-formula.md, Hindi, tags [HOOK] [DUNIYA] [KHEL] [RAAZ] [SABAK], myth-then-number hook, a "मान लीजिए" character, numbers as words, ~480-600 words; beat 1's shot is the thumbnail scene: boss at the business, subject centred), and run `python3 scripts/check_script.py <slug>` until it prints `script.md ok`. Write `03_audio/chunk_plan.json` (voice-and-audio.md). Check compliance-and-safety.md. Mark the topic used: `python3 scripts/state_db.py topic-use "<topic>"`.
 
 4. `python3 scripts/generate_narration_chunks.py <slug>` then `python3 scripts/stitch_audio.py <slug>`. If stitch exits 3 (runtime outside 180-300 s), edit the script and chunk plan, delete the changed chunks' files, and rerun both. Then write `08_publish/metadata.json` (publishing-and-metadata.md, thumbnail-and-metadata.md) using `03_audio/timings.json` for chapters and `shorts_hook`.
 
@@ -2490,7 +2698,7 @@ This directory is the production system for the Hindi YouTube channel **Mafia of
 
 Secrets in `.env` (gitignored): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `MONGODB_URI`. State in MongoDB db `mafia_of_business_pipeline`.
 
-Forked on 2026-10-01 from the RedHat Engineer pipeline (`../imagine_error_gh_action/`); design in `docs/superpowers/specs/2026-10-01-mafia-of-business-design.md`.
+Forked on 2026-10-01 from the sibling pipeline in `../imagine_error_gh_action/`; design in `docs/superpowers/specs/2026-10-01-mafia-of-business-design.md`.
 ```
 
 Overwrite `README.md`:
@@ -2523,7 +2731,7 @@ Cloudflare's free tier is 10,000 neurons a day for this account; a ~45-scene epi
 
 ## Posting
 
-Open `MafiaOfBusiness/output/<slug>/posting.md`: it has the title, alternates, description, tags, pinned comment, community poll, Shorts range and a checklist. After posting:
+Open `MafiaOfBusiness/output/<slug>/posting.md`: it has the title, alternates, description, tags, playlist, pinned comment, community poll, Shorts range and a checklist. Post daily if you can (both reference channels grew on one video a day). After posting:
 
 ```bash
 cd MafiaOfBusiness && ../.venv/bin/python scripts/state_db.py episode-posted <slug> <youtube-url>
