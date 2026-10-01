@@ -330,10 +330,11 @@ New:
 - **Length guard** (4.3 above): stage fails with "narration 312 s > 300 s cap:
   trim script" and the agent trims.
 - **Hindi guard** (new `scripts/check_script.py`, run by `run_episode.py`
-  before audio): the script's narration lines are mostly Devanagari (at
-  least 90% of letters), contain no digits (numbers must be words for the
-  TTS), and every section tag is present in order. Fails with the offending
-  lines.
+  before audio): the script's narration is at least 90% Devanagari letters
+  overall, no beat has more than two Latin-script words (one or two English
+  business words are fine, a whole English sentence is not), no beat contains
+  digits (numbers must be words for the TTS), and every section tag is
+  present in order. Fails with the offending lines.
 - **Visual QA gate** adds: boss on-model (black fedora with gold band, no
   mouth), only black/white/gold.
 
