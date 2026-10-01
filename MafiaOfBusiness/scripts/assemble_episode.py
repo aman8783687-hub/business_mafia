@@ -56,6 +56,15 @@ def beat_screen_duration(beats: list[dict], index: int, total_seconds: float) ->
     return total_seconds - beats[index]["start"]
 
 
+def caption_filter(ass_path: str) -> str:
+    """ffmpeg filter graph that burns the ASS captions in. Uses the `ass`
+    filter (not `subtitles`) because only it exposes `shaping`: libass
+    defaults to simple shaping, which mangles Devanagari conjuncts and
+    matras (found 2026-10-01); complex shaping uses HarfBuzz."""
+    escaped = str(ass_path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+    return f"[0:v]ass='{escaped}':shaping=complex[v]"
+
+
 def load_motion_by_scene(scenes_dir: Path) -> dict[int, str]:
     import json
     shotlist = json.loads((scenes_dir / "shotlist.json").read_text())
@@ -146,8 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     output_path = edit_dir / f"redhat-engineer-{slug}-episode.mp4"
     cmd = ["ffmpeg", "-y", "-i", str(body_silent), "-i", str(mastered_audio)]
     if captions_ass_path:
-        escaped = str(captions_ass_path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
-        cmd += ["-filter_complex", f"[0:v]subtitles='{escaped}'[v]", "-map", "[v]", "-map", "1:a"]
+        cmd += ["-filter_complex", caption_filter(str(captions_ass_path)), "-map", "[v]", "-map", "1:a"]
     else:
         cmd += ["-map", "0:v", "-map", "1:a"]
     # CRF-based rate control, not a flat high ABR bitrate: these are slow

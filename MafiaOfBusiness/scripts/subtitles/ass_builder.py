@@ -62,7 +62,7 @@ def build_ass(phrases: list[list[dict]], config: dict, width: int, height: int) 
     settle_ms = config.get("settle_duration_ms", 100)
 
     header = f"""[Script Info]
-Title: RedHat Engineer animated captions
+Title: {config.get('title', 'animated captions')}
 ScriptType: v4.00+
 WrapStyle: 2
 ScaledBorderAndShadow: yes
@@ -97,7 +97,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for group in line_groups:
                 runs = []
                 for w in group:
-                    display = _escape(w["text"].upper() if uppercase else w["text"])
+                    shown = w["text"].replace("।", "").strip() or w["text"]
+                    display = _escape(shown.upper() if uppercase else shown)
                     if word_cursor == active_idx:
                         runs.append(
                             f"{{\\t(0,{pop_ms},\\fscx{pop_scale}\\fscy{pop_scale})"
