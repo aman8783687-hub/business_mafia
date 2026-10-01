@@ -72,6 +72,8 @@ def thumbnail_args(episode_dir: Path) -> list[str] | None:
     args = [str(SCRIPTS / "make_thumbnail.py"), text, "--out", str(episode_dir / "08_publish" / "thumbnail.png")]
     if metadata.get("thumbnail_accent_word"):
         args += ["--accent-word", metadata["thumbnail_accent_word"]]
+    for note in (metadata.get("thumbnail_annotations") or [])[:4]:
+        args += ["--annotation", note]
     beat = int(metadata.get("thumbnail_beat") or 1)
     scene = episode_dir / "05_scenes" / f"scene_{beat:04d}.png"
     if scene.exists():
