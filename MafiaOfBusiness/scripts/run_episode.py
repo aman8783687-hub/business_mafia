@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run an episode through the entire mechanical pipeline, unattended:
-audio -> scenes -> assembly -> upload to Content Lab.
+audio -> scenes -> assembly -> thumbnail -> finalize into output/<slug>/.
 No human confirmation step at any stage.
 
 Preconditions this script does NOT create for you -- these are the
@@ -15,11 +15,9 @@ calling this:
 This script handles everything mechanical after that: narration
 synthesis, stitching, scene generation, ffmpeg assembly, the thumbnail
 (08_publish/thumbnail.png, from metadata.json's thumbnail_text), and
-uploading to Content Lab (the operator posts by hand), then deleting the episode's media. A stage failure aborts the run with
-a clear message rather than continuing on broken input (unlike
-publish_all.py's per-platform "log and continue", which is safe because
-each platform publish is independent -- an audio failure poisons every
-later stage, so there's nothing safe to continue into).
+copying the package to output/<slug>/ and recording it in MongoDB (finalize_episode.py), then deleting the episode's intermediates. A stage
+failure aborts the run with a clear message rather than continuing on
+broken input: an audio failure poisons every later stage.
 
 Usage: python3 scripts/run_episode.py <episode-slug>
 """
@@ -37,6 +35,18 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 SCRIPTS = WORKSPACE / "scripts"
 LOCK_PATH = WORKSPACE / ".run_episode.lock"
 
+# (stage name, script) in run order; the thumbnail runs between assembly and
+# finalize as an optional stage (see main).
+STAGES = [
+    ("Check script", "check_script.py"),
+    ("Narration", "generate_narration_chunks.py"),
+    ("Stitch audio", "stitch_audio.py"),
+    ("Generate scenes", "generate_scenes.py"),
+    ("Assemble episode", "assemble_episode.py"),
+    ("Finalize", "finalize_episode.py"),
+    ("Cleanup", "cleanup_episode.py"),
+]
+
 
 def _subprocess_env() -> dict:
     # No extra environment to inject -- each stage script reads its own
@@ -53,7 +63,7 @@ def run_stage(name: str, args: list[str]) -> None:
 
 
 def run_optional_stage(name: str, args: list[str]) -> None:
-    """A stage whose failure must not stop the episode (the thumbnail: the video is still worth uploading)."""
+    """A stage whose failure must not stop the episode."""
     print(f"\n=== {name} ===")
     result = subprocess.run([sys.executable, *args], cwd=WORKSPACE, env=_subprocess_env())
     if result.returncode != 0:
@@ -123,15 +133,12 @@ def main() -> None:
     scenes_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(episode_dir / "02_script" / "shotlist.json", scenes_dir / "shotlist.json")
 
-    run_stage("Narration", [str(SCRIPTS / "generate_narration_chunks.py"), slug])
-    run_stage("Stitch audio", [str(SCRIPTS / "stitch_audio.py"), slug])
-    run_stage("Generate scenes", [str(SCRIPTS / "generate_scenes.py"), slug])
-    run_stage("Assemble episode", [str(SCRIPTS / "assemble_episode.py"), slug])
-    thumb = thumbnail_args(episode_dir)
-    if thumb:
-        run_optional_stage("Thumbnail", thumb)
-    run_stage("Upload to Content Lab", [str(SCRIPTS / "publish_all.py"), slug])
-    run_stage("Cleanup", [str(SCRIPTS / "cleanup_episode.py"), slug])
+    for name, script in STAGES:
+        if name == "Finalize":
+            thumb = thumbnail_args(episode_dir)
+            if thumb:
+                run_optional_stage("Thumbnail", thumb)
+        run_stage(name, [str(SCRIPTS / script), slug])
 
     print(f"\n=== DONE: {slug} ===")
 

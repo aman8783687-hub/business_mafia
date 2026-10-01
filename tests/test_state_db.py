@@ -60,3 +60,30 @@ def test_pull_keeps_git_config_and_takes_only_live_state(db, tmp_path, monkeypat
     assert merged["channel"]["name"] == "RedHat Engineer"
     assert merged["counters"]["episodes_published"] == 5
     assert merged["baselines"]["completion_rate_30d"] == 0.4
+def test_episode_ready_then_posted(db):
+    state_db.episode_ready(db, "2026-10-02-chai", {"title": "t", "status": "ready", "output_dir": "/o"})
+    doc = db.episodes.find_one({"_id": "2026-10-02-chai"})
+    assert doc["status"] == "ready" and doc["output_dir"] == "/o"
+    state_db.episode_posted(db, "2026-10-02-chai", "https://youtu.be/x")
+    doc = db.episodes.find_one({"_id": "2026-10-02-chai"})
+    assert doc["status"] == "posted" and doc["youtube_url"] == "https://youtu.be/x"
+
+
+def test_episode_status_reads_finalize_log():
+    assert state_db._episode_status({}) == ("pending", None)
+    files = {"08_publish/finalize_log.json": '{"status": "ok", "output_dir": "/o"}'}
+    assert state_db._episode_status(files) == ("ready", "/o")
+
+
+def test_push_does_not_downgrade_a_posted_episode(db, tmp_path, monkeypatch):
+    monkeypatch.setattr(state_db, "STATE_PATH", tmp_path / "missing.json")
+    ep = tmp_path / "episodes" / "e1" / "08_publish"
+    ep.mkdir(parents=True)
+    (ep / "finalize_log.json").write_text('{"status": "ok", "output_dir": "/o"}')
+    state_db.episode_posted(db, "e1", "https://youtu.be/x")
+    state_db.push(db, tmp_path)
+    assert db.episodes.find_one({"_id": "e1"})["status"] == "posted"
+
+
+def test_no_slot_commands_remain():
+    assert not hasattr(state_db, "slot_check")

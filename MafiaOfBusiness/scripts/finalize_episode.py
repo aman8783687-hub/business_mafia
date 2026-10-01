@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Final stage (replaces RedHat's Content Lab upload): verify the render,
+"""Final stage (local, no upload): verify the render,
 copy the posting package to output/<slug>/, record the episode in MongoDB
 as "ready", and write 08_publish/finalize_log.json. cleanup_episode.py
 deletes intermediates only after this log says ok. Idempotent: a rerun on a

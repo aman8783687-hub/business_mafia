@@ -1,57 +1,43 @@
 #!/usr/bin/env bash
-# Make ONE RedHat Engineer episode locally and upload it to Content Lab (same
-# cycle CI runs, minus the schedule and the slot check).
+# Make ONE Mafia of Business episode locally: an opencode agent picks a topic,
+# writes the Hindi script, and the pipeline renders it into
+# MafiaOfBusiness/output/<slug>/ (video, thumbnail, captions, posting.md).
 #
-#   ./make-video              one extra episode, not tied to a schedule slot
-#   ./make-video --slot       fill the current CI slot instead (CI then skips it)
+#   ./make-video
 #
-# Output is shown live and also saved to MafiaOfBusiness/.scratch/local_run_<timestamp>.log.
+# Output is shown live and saved to MafiaOfBusiness/.scratch/local_run_<timestamp>.log.
 # Optional env: OPENCODE_MODEL, MAX_ATTEMPTS (default 4).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-fill_slot=0
 case "${1:-}" in
   "") ;;
-  --slot) fill_slot=1 ;;
   -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
 esac
 
-# Python deps live in a local venv (gitignored); create it on first use.
 if [ ! -x .venv/bin/python3 ]; then
   echo "first run: creating .venv..."
   python3 -m venv .venv
 fi
-# Pillow is needed for scene generation and the thumbnail; older venvs lack it.
 if ! .venv/bin/python3 -c "import edge_tts, pymongo, requests, PIL" 2>/dev/null; then
   echo "installing edge-tts, pymongo, requests, pillow..."
   .venv/bin/pip install -q edge-tts pymongo requests pillow
 fi
 export PATH="$ROOT/.venv/bin:$HOME/.opencode/bin:$PATH"
 
-for tool in ffmpeg opencode; do
+for tool in ffmpeg ffprobe opencode; do
   command -v "$tool" >/dev/null || { echo "missing required tool: $tool" >&2; exit 1; }
 done
-[ -f .env ] || { echo "missing $ROOT/.env (needs CONTENT_LAB_*, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, MONGODB_URI)" >&2; exit 1; }
+fc-list | grep -q "Noto Sans Devanagari" || {
+  echo "missing font Noto Sans Devanagari (sudo apt install fonts-noto-core)" >&2; exit 1; }
+[ -f .env ] || { echo "missing $ROOT/.env (needs CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, MONGODB_URI)" >&2; exit 1; }
 
 cd MafiaOfBusiness
-mkdir -p .scratch
+mkdir -p .scratch output
 log=".scratch/local_run_$(date +%Y%m%d_%H%M%S).log"
-
-unset IMAGINE_ERROR_SLOT
-if [ "$fill_slot" -eq 1 ]; then
-  out="$(python3 scripts/state_db.py slot-check --force)"
-  IMAGINE_ERROR_SLOT="$(sed -n 's/^slot=//p' <<<"$out")"
-  export IMAGINE_ERROR_SLOT
-  echo "filling slot: $IMAGINE_ERROR_SLOT"
-else
-  echo "extra episode, not tied to a slot"
-fi
-
 echo "logging to MafiaOfBusiness/$log"
-# run_cycle.sh exits non-zero on failure; keep that status after tee.
 bash scripts/run_cycle.sh 2>&1 | tee "$log"
 exit "${PIPESTATUS[0]}"

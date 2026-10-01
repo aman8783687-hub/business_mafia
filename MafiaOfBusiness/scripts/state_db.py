@@ -1,5 +1,5 @@
-"""RedHat Engineer's MongoDB-backed state: topic bank, episode records,
-publish-slot tracking, and channel_state.json's live counters. There is
+"""Mafia of Business's MongoDB-backed state: topic bank, episode records,
+and channel_state.json's live counters. There is
 no topic_bank.json or committed episode state -- MongoDB is the only
 copy. CLI:
 
@@ -11,9 +11,7 @@ copy. CLI:
     state_db.py topic-add                    -- add topic(s), JSON object or list on stdin
     state_db.py topic-use "<name>"           -- mark a queued topic used
     state_db.py topic-reject "<name>" "<why>" -- reject a queued topic
-    state_db.py slot-check [--force]          -- GitHub Actions output: slot=<id>, run=true|false
-    state_db.py slot-done <id>
-    state_db.py slot-failed <id>
+    state_db.py episode-posted <slug> <url>  -- mark a finalized episode as posted on YouTube
 """
 from __future__ import annotations
 
@@ -37,12 +35,11 @@ EPISODE_TEXT_FILES = (
     "02_script/shotlist.json",
     "03_audio/chunk_plan.json",
     "08_publish/metadata.json",
-    "08_publish/upload_log.json",
+    "08_publish/finalize_log.json",
 )
 CHANNEL_STATE_ID = "channel_state"
 DEFAULT_DB_NAME = "mafia_of_business_pipeline"
 IST = timezone(timedelta(hours=5, minutes=30))
-SLOT_HOURS = ((19, "evening"), (7, "morning"))  # latest first
 
 
 def get_db():
@@ -116,13 +113,26 @@ def topic_reject(db, name: str, reason: str) -> None:
     _move_topic(db, name, "rejected", {"rejected_reason": reason})
 
 
+def episode_ready(db, slug: str, doc: dict) -> None:
+    db.episodes.update_one({"_id": slug}, {"$set": {"slug": slug, **doc}}, upsert=True)
+
+
+def episode_posted(db, slug: str, url: str) -> None:
+    db.episodes.update_one(
+        {"_id": slug},
+        {"$set": {"slug": slug, "status": "posted", "youtube_url": url,
+                  "posted_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+
+
 def _episode_status(files: dict) -> tuple[str, str | None]:
-    upload_log_raw = files.get("08_publish/upload_log.json")
-    if upload_log_raw:
+    raw = files.get("08_publish/finalize_log.json")
+    if raw:
         try:
-            log = json.loads(upload_log_raw)
-            if log.get("content_lab", {}).get("status") == "ok":
-                return "ok", log["content_lab"].get("url")
+            log = json.loads(raw)
+            if log.get("status") == "ok":
+                return "ready", log.get("output_dir")
         except json.JSONDecodeError:
             pass
     return "pending", None
@@ -142,13 +152,16 @@ def _push_episodes(db, workspace: Path) -> None:
                 files[rel] = p.read_text()
         if not files:
             continue
-        status, url = _episode_status(files)
+        status, output_dir = _episode_status(files)
         topic_raw = files.get("topic.json")
         topic = json.loads(topic_raw)["topic"] if topic_raw else None
+        existing = db.episodes.find_one({"_id": ep_dir.name}) or {}
+        if existing.get("status") == "posted":
+            status = "posted"
         db.episodes.update_one(
             {"_id": ep_dir.name},
             {"$set": {
-                "slug": ep_dir.name, "topic": topic, "status": status, "url": url,
+                "slug": ep_dir.name, "topic": topic, "status": status, "output_dir": output_dir,
                 "files": files, "updated_at": datetime.now(timezone.utc).isoformat(),
             }},
             upsert=True,
@@ -164,38 +177,6 @@ def _restore_unfinished_episodes(db, workspace: Path) -> None:
             path = ep_dir / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
-
-
-def current_slot(now=None) -> str:
-    now = (now or datetime.now(IST))
-    for hour, name in SLOT_HOURS:
-        if now.hour >= hour:
-            return f"{now.date().isoformat()}-{name}"
-    yesterday = (now - timedelta(days=1)).date().isoformat()
-    return f"{yesterday}-evening"
-
-
-def slot_check(db, slot: str, force: bool = False, max_failures: int = 3) -> tuple[bool, str]:
-    if force:
-        return True, "forced"
-    doc = db.slots.find_one({"_id": slot})
-    if doc and doc.get("done_at"):
-        return False, "already done"
-    if doc and doc.get("failures", 0) >= max_failures:
-        return False, f"exceeded max_failures ({max_failures})"
-    return True, "ok"
-
-
-def slot_done(db, slot: str) -> None:
-    db.slots.update_one({"_id": slot}, {"$set": {"done_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
-
-
-def slot_failed(db, slot: str) -> None:
-    db.slots.update_one(
-        {"_id": slot},
-        {"$inc": {"failures": 1}, "$set": {"last_failure_at": datetime.now(timezone.utc).isoformat()}},
-        upsert=True,
-    )
 
 
 # Only these keys are live run state. Everything else in channel_state.json
@@ -246,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
     elif cmd == "recent":
         n = int(rest[0]) if rest else 10
         for ep in recent(db, n):
-            print(f"{ep['slug']}\t{ep['status']}\t{ep.get('url') or ''}")
+            print(f"{ep['slug']}\t{ep['status']}\t{ep.get('youtube_url') or ep.get('output_dir') or ''}")
     elif cmd == "topics":
         status = rest[0] if rest else "queued"
         for t in topics(db, status):
@@ -262,18 +243,8 @@ def main(argv: list[str] | None = None) -> int:
         topic_use(db, rest[0])
     elif cmd == "topic-reject":
         topic_reject(db, rest[0], rest[1])
-    elif cmd == "slot-check":
-        force = "--force" in rest
-        max_failures = int(env_loader.get("MAX_SLOT_FAILURES", "3"))
-        slot = current_slot()
-        run, reason = slot_check(db, slot, force=force, max_failures=max_failures)
-        print(f"slot={slot}")
-        print(f"run={'true' if run else 'false'}")
-        print(f"reason: {reason}", file=sys.stderr)
-    elif cmd == "slot-done":
-        slot_done(db, rest[0])
-    elif cmd == "slot-failed":
-        slot_failed(db, rest[0])
+    elif cmd == "episode-posted":
+        episode_posted(db, rest[0], rest[1])
     else:
         print(f"unknown command: {cmd}", file=sys.stderr)
         return 1
