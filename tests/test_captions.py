@@ -1,0 +1,35 @@
+from subtitles import segment, ass_builder
+
+
+def test_segment_phrases_breaks_on_gap():
+    words = [
+        {"text": "The", "start": 0.0, "end": 0.2}, {"text": "keeper", "start": 0.2, "end": 0.6},
+        {"text": "vanished.", "start": 0.6, "end": 1.0},
+        {"text": "It", "start": 1.5, "end": 1.7}, {"text": "was", "start": 1.7, "end": 1.9},
+    ]
+    phrases = segment.segment_phrases(words, max_words=5, min_words=2, max_gap_seconds=0.2)
+    assert len(phrases) == 2
+    assert [w["text"] for w in phrases[0]] == ["The", "keeper", "vanished."]
+
+
+def test_segment_phrases_breaks_on_max_words():
+    words = [{"text": str(i), "start": i * 0.3, "end": i * 0.3 + 0.2} for i in range(7)]
+    phrases = segment.segment_phrases(words, max_words=3, min_words=1, max_gap_seconds=1.0)
+    assert all(len(p) <= 3 for p in phrases)
+
+
+def test_build_ass_contains_style_and_dialogue():
+    phrases = [[{"text": "The", "start": 0.0, "end": 0.3}, {"text": "keeper", "start": 0.3, "end": 0.8}]]
+    config = {
+        "font_family": "DejaVu Sans", "font_size": 50, "bold": True,
+        "primary_color_ass": "&H00FFFFFF", "outline_color_ass": "&H00000000",
+        "highlight_color_ass": "&H00F65C8B", "outline_width": 3.0, "shadow_depth": 1.2,
+        "alignment": 2, "margin_v_ratio": 0.12, "safe_margin_side_px": 80,
+        "pop_scale_percent": 115, "pop_duration_ms": 120, "settle_duration_ms": 100,
+    }
+    ass = ass_builder.build_ass(phrases, config, 1920, 1080)
+    assert "PlayResX: 1920" in ass
+    assert "PlayResY: 1080" in ass
+    assert "Style: Caption" in ass
+    assert "Dialogue:" in ass
+    assert "Title: RedHat Engineer animated captions" in ass

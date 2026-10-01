@@ -1,0 +1,125 @@
+{
+  "note": "All effects synthesized locally, no licensing concern.",
+  "sample_rate": 48000,
+  "effects": {
+    "wind": {
+      "file": "wind.wav",
+      "hit_offset": 0.0,
+      "duration": 6.0,
+      "gain_db": -4.0,
+      "description": "a low, filtered windy rumble, loops well as a bed"
+    },
+    "creak": {
+      "file": "creak.wav",
+      "hit_offset": 0.0,
+      "duration": 1.2,
+      "gain_db": -6.0,
+      "description": "a single wooden door/floorboard creak"
+    },
+    "distant_thunder": {
+      "file": "distant_thunder.wav",
+      "hit_offset": 0.0,
+      "duration": 3.0,
+      "gain_db": -3.0,
+      "description": "a distant, low thunder rumble"
+    },
+    "heartbeat": {
+      "file": "heartbeat.wav",
+      "hit_offset": 0.0,
+      "duration": 2.0,
+      "gain_db": -8.0,
+      "description": "two low heartbeat thumps"
+    },
+    "footsteps": {
+      "file": "footsteps.wav",
+      "hit_offset": 0.0,
+      "duration": 1.6,
+      "gain_db": -10.0,
+      "description": "two soft footstep taps"
+    },
+    "silence_sting": {
+      "file": "silence_sting.wav",
+      "hit_offset": 0.0,
+      "duration": 1.0,
+      "gain_db": -12.0,
+      "description": "a very quiet sustained low tone for an eerie pause"
+    },
+    "whisper": {
+      "file": "whisper.wav",
+      "hit_offset": 0.0,
+      "duration": 1.5,
+      "gain_db": -10.0,
+      "description": "a soft breathy hiss"
+    },
+    "reveal_sting": {
+      "file": "reveal_sting.wav",
+      "hit_offset": 0.0,
+      "duration": 2.5,
+      "gain_db": -5.0,
+      "description": "a low two-tone sting for the climax/reveal beat"
+    },
+    "whoosh_soft_1": {
+      "file": "whoosh_soft_1.wav",
+      "hit_offset": 0.55,
+      "duration": 1.0,
+      "gain_db": -5.0,
+      "description": "a soft rising whoosh for a scene cut"
+    },
+    "whoosh_soft_2": {
+      "file": "whoosh_soft_2.wav",
+      "hit_offset": 0.65,
+      "duration": 1.2,
+      "gain_db": -5.0,
+      "description": "a slower, darker whoosh for a scene cut"
+    },
+    "whoosh_soft_3": {
+      "file": "whoosh_soft_3.wav",
+      "hit_offset": 0.5,
+      "duration": 0.9,
+      "gain_db": -5.0,
+      "description": "a short, brighter whoosh for a scene cut"
+    },
+    "temple_bell": {
+      "file": "temple_bell.wav",
+      "hit_offset": 0.0,
+      "duration": 3.5,
+      "gain_db": -3.0,
+      "description": "a single distant temple bell strike"
+    },
+    "fire_crackle": {
+      "file": "fire_crackle.wav",
+      "hit_offset": 0.0,
+      "duration": 3.0,
+      "gain_db": -3.0,
+      "description": "a low fire bed with sparse crackles"
+    },
+    "water": {
+      "file": "water.wav",
+      "hit_offset": 0.0,
+      "duration": 3.5,
+      "gain_db": -5.0,
+      "description": "flowing water with a few small bubbles"
+    },
+    "drum": {
+      "file": "drum.wav",
+      "hit_offset": 0.0,
+      "duration": 2.4,
+      "gain_db": -2.0,
+      "description": "three low skin-drum hits"
+    },
+    "metal_clang": {
+      "file": "metal_clang.wav",
+      "hit_offset": 0.0,
+      "duration": 1.8,
+      "gain_db": -6.0,
+      "description": "a single ringing metal strike"
+    },
+    "paper_rustle": {
+      "file": "paper_rustle.wav",
+      "hit_offset": 0.0,
+      "duration": 1.2,
+      "gain_db": -4.0,
+      "description": "a brief rustle of old paper"
+    }
+  }
+}
