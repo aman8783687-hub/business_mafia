@@ -20,5 +20,4 @@ def test_beat_to_section_map(tmp_path):
 
 
 def test_voice_id_matches_channel_state():
-    assert gnc.VOICE == gnc.STATE["voice"]["voice_id"]
-    assert "Ava" in gnc.VOICE and "female" in gnc.STATE["voice"]["settings"]["audio_profile"]
+    assert gnc.VOICE == gnc.STATE["voice"]["voice_id"] == "hi-IN-MadhurNeural"

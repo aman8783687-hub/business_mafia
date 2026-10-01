@@ -23,9 +23,9 @@ def test_channel_state_has_no_music_config():
     s = state.load_state()
     assert "music_bed_db_under_voice" not in s["audio"]
     assert s["ambience"]["enabled"] is True
-    assert s["format"]["target_runtime_seconds"] == 360
+    assert s["format"]["target_runtime_seconds"] == 240
     assert s["style_lock"]["aspect"] == "16:9"
-    assert s["style_lock"]["character_name"] == "RedHat Engineer"
+    assert s["style_lock"]["character_name"] == "The Boss"
 
 
 from scenes import prompt_builder

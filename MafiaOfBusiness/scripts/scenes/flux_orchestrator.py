@@ -1,6 +1,6 @@
 """Generates one episode's scene images with FLUX.2 [klein] on Cloudflare
-Workers AI, conditioned on RedHat Engineer's host reference image so the
-red-fedora stickman stays the same character from beat to beat. This is
+Workers AI, conditioned on Mafia of Business's host reference image so the
+boss stickman stays the same character from beat to beat. This is
 the default image backend (IMAGE_BACKEND=flux).
 
 One REST call per beat: POST /accounts/{id}/ai/run/@cf/black-forest-labs/<model>
@@ -48,7 +48,7 @@ REFERENCE_IMAGE = Path(__file__).resolve().parent.parent.parent / "brand" / "hos
 # Prepended to every prompt at request time (kept out of prompt_plan.json).
 REFERENCE_INSTRUCTION = (
     "The stickman host is the exact same character as in the reference image "
-    "(same red fedora, two dot eyes, no mouth, plain stick body). "
+    "(same black fedora with a gold band, thin suit outline, gold tie, two dot eyes, no mouth). "
 )
 
 WORKERS = 3

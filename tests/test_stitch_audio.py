@@ -5,8 +5,8 @@ import stitch_audio
 
 
 def test_config_pulled_from_channel_state():
-    assert stitch_audio.GAP_WITHIN_SECTION == 0.55
-    assert stitch_audio.GAP_SECTION_BREAK == 1.0
+    assert stitch_audio.GAP_WITHIN_SECTION == 0.4
+    assert stitch_audio.GAP_SECTION_BREAK == 0.8
     assert stitch_audio.TARGET_LUFS == -14.0
 
 

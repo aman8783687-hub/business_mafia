@@ -1,71 +1,43 @@
 {
   "channel": {
-    "name": "RedHat Engineer",
-    "handles": {
-      "note": "Posting is done by hand by the operator from the Content Lab dashboard (RedHat Engineer section)."
-    },
+    "name": "Mafia of Business",
+    "handles": {"note": "Posting is done by hand by the operator from MafiaOfBusiness/output/<slug>/."},
     "autonomy": {
       "publish_without_approval": true,
-      "authorized_by": "operator, 2026-09-30, explicit instruction to convert this pipeline to the RedHat Engineer tech channel (previously authorized 2026-09-27 to run end to end without human approval)",
-      "scope": "Producing and uploading one video per run to Content Lab via scripts/run_episode.py. Does NOT authorize skipping compliance-and-safety.md boundaries.",
-      "known_risk": "No automated visual QA step exists for generated scenes -- see SKILL.md's 'Known accepted risk' note."
+      "authorized_by": "operator, 2026-10-01, explicit instruction to build this pipeline",
+      "scope": "Producing one video per run into output/<slug>/ via scripts/run_episode.py. Does NOT authorize posting anywhere or skipping compliance-and-safety.md.",
+      "known_risk": "No automated visual QA step exists for generated scenes -- see SKILL.md."
     },
     "timezone": "Asia/Kolkata",
-    "publish_window": "not yet scheduled -- workflow_dispatch only until the operator adds an on: schedule: block",
-    "publish_cadence": "1 video per workflow_dispatch run",
-    "language": "en",
-    "topic": "The story and mysteries behind technological innovation, past and present: legends, disputed claims, missing papers and conspiracy theories told fairly, then checked against the record."
+    "publish_cadence": "1 video per ./make-video run",
+    "language": "hi",
+    "topic": "How everyday Indian businesses and people actually make money (chai tapri, dhaba, gym, tuition centre, wedding planner, politician...), told as a Hindi story, never as a math lecture."
   },
   "voice": {
     "provider": "edge-tts",
-    "model": "edge-tts (Microsoft Edge online neural TTS, free, no API key, no quota)",
-    "voice_id": "en-US-AvaMultilingualNeural",
-    "voice_note": "Kept as the female narrator on 2026-09-30 when the pipeline was converted to the RedHat Engineer channel (the original RedHat pipeline used en-US-AndrewMultilingualNeural; the operator chose to keep the female voice). Log any further change in reports/changelog.md.",
+    "model": "edge-tts (Microsoft Edge online neural TTS, free, no API key)",
+    "voice_id": "hi-IN-MadhurNeural",
+    "fallback_voice_id": "hi-IN-SwaraNeural",
+    "default_section": "khel",
     "settings": {
-      "audio_profile": "Warm adult female narrator, confident and measured. Emotion is NOT via SSML/mstts:express-as (Microsoft blocks custom SSML server-side). Instead rate/volume/pitch are varied per script section to shape the arc of a technology story; see section_presets.",
+      "audio_profile": "Confident adult male Hindi narrator, an insider telling you how the game really works. Emotion via per-section rate/volume/pitch (custom SSML is blocked server-side).",
       "section_presets": {
-        "cold_open": {
-          "rate": "-8%",
-          "volume": "+0%",
-          "pitch": "-2Hz",
-          "note": "The hook: the question or contradiction that makes someone stay. Slow and deliberate."
-        },
-        "setup": {
-          "rate": "+0%",
-          "volume": "+0%",
-          "pitch": "+0Hz",
-          "note": "Who, where, when, and what problem existed before the invention. Matter-of-fact."
-        },
-        "rising_mystery": {
-          "rate": "+7%",
-          "volume": "+5%",
-          "pitch": "+2Hz",
-          "note": "The bulk: the attempts, rivalries, failures and disputed claims. Faster and more energetic."
-        },
-        "climax_reveal": {
-          "rate": "-6%",
-          "volume": "+0%",
-          "pitch": "-1Hz",
-          "note": "The turn: what the record actually shows versus the legend. Slightly slower, more weight."
-        },
-        "aftermath": {
-          "rate": "-10%",
-          "volume": "-2%",
-          "pitch": "-3Hz",
-          "note": "Landing: what it means now, and what nobody can answer yet. Calm and quiet."
-        }
+        "hook":   {"rate": "-6%", "volume": "+0%", "pitch": "-2Hz", "note": "The rupee shock or question. Slow, weighty."},
+        "duniya": {"rate": "+0%", "volume": "+0%", "pitch": "+0Hz", "note": "The world: who this person is, what everyone thinks they earn."},
+        "khel":   {"rate": "+6%", "volume": "+5%", "pitch": "+1Hz", "note": "The money game, stream by stream. Energetic."},
+        "raaz":   {"rate": "-5%", "volume": "+0%", "pitch": "-1Hz", "note": "The secret trick. Slower, conspiratorial."},
+        "sabak":  {"rate": "-8%", "volume": "-2%", "pitch": "-2Hz", "note": "Takeaway, comment question, next episode. Calm."}
       }
     },
     "seed": null,
     "max_chunk_seconds": 20,
-    "chunking_rule": "Generate narration 2-3 sentences at a time (looser than a Shorts channel's 1-2, proportionate to a 5-7 minute format). Save as chunk_0001.mp3, chunk_0002.mp3, ... in the episode's 03_audio/ folder, then stitch with scripts/stitch_audio.py.",
-    "generation_notes": "Generated locally with scripts/generate_narration_chunks.py (edge-tts Python package). Maps each chunk to its script.md section ([COLD_OPEN]/[SETUP]/[RISING_MYSTERY]/[CLIMAX_REVEAL]/[AFTERMATH]) to pick the right rate/volume/pitch preset.",
+    "chunking_rule": "2-3 sentences per chunk, saved as 03_audio/chunk_0001.mp3 ..., stitched by scripts/stitch_audio.py.",
     "status": "LOCKED",
-    "notes": "Never change mid-video. Log any change with a dated reason in reports/changelog.md."
+    "notes": "Never change mid-video. Log any change in reports/changelog.md."
   },
   "style_lock": {
-    "image_prompt_suffix": "hand-drawn black marker stickman on a clean white whiteboard, thick confident marker strokes, solid red marker fedora with black band, the stickman has exactly two black dot eyes and NO mouth, a neutral calm face, thin single-line stick limbs and a plain stick body with no clothing, no text, no letters, no numbers, one or two simple hand-drawn marker props only, no arrows, lots of empty white space, only red, black and white colors, whiteboard explainer animation look",
-    "negative_prompt": "color photo, photorealistic, 3d render, shading, gradients, text, letters, numbers, watermark, mouth, extra colors",
+    "image_prompt_suffix": "hand-drawn black marker stickman on a clean white whiteboard, thick confident marker strokes, the stickman wears a black fedora with a gold band, a thin black outline suit jacket and a small solid gold tie, exactly two black dot eyes and NO mouth, calm neutral face, thin single-line stick limbs, no text, no letters, no numbers, one or two simple hand-drawn marker props only, money props drawn in gold, no arrows, lots of empty white space, only black, white and gold colors, no red, whiteboard explainer animation look",
+    "negative_prompt": "color photo, photorealistic, 3d render, shading, gradients, text, letters, numbers, watermark, mouth, red, extra colors",
     "aspect": "16:9",
     "resolution": "1920x1080",
     "generation_resolution": "1024x576",
@@ -73,13 +45,11 @@
     "model": "@cf/black-forest-labs/flux-2-klein-9b",
     "cfg_scale": 7.5,
     "steps": 20,
-    "character_name": "RedHat Engineer",
+    "character_name": "The Boss",
     "reference_assets": [
-      "MafiaOfBusiness/brand/host/host-reference-clean.jpeg -- clean whiteboard stickman on a plain white background, sent as the reference image with every scene request by scenes/flux_orchestrator.py.",
-      "MafiaOfBusiness/brand/host/main-character-sheet.png and style-lock-poses/ -- human reference only."
+      "MafiaOfBusiness/brand/host/host-reference-clean.jpeg -- the boss stickman (variant 1 of 4, seed 11, approved 2026-10-01), sent with every scene request."
     ],
-    "generation_notes": "Converted to the RedHat Engineer look on 2026-09-30. FLUX.2 [klein] on Cloudflare Workers AI takes a reference image, which is what keeps the red-fedora stickman the same character beat to beat. It has no negative_prompt, cfg_scale or steps parameters: those two fields are kept only so the raphael and cloudflare-SDXL fallback backends still run, and neither keeps the host on-model. Known ceiling: more than 2 distinct characters in one shot collapses to 1 rendered subject -- write multi-character beats as shot/reverse-shot pairs. The earlier painterly Indian-mystery look is retired (see reports/changelog.md).",
-    "generation_tooling": "MafiaOfBusiness/scripts/scenes/flux_orchestrator.py (IMAGE_BACKEND=flux, the default) POSTs each beat to Workers AI with the reference image; 3 parallel workers, retry with backoff on 429/5xx, stops the batch on bad credentials or a spent daily quota.",
+    "generation_notes": "FLUX.2 klein takes the reference image, which keeps the boss on-model. More than 2 distinct characters per shot collapses to 1; write multi-character beats as shot/reverse-shot. Indian settings (chai stall, dhaba, mandi, auto, wedding tent) are described as one or two simple props.",
     "status": "LOCKED"
   },
   "audio": {
@@ -87,140 +57,90 @@
     "true_peak_db": -1.0,
     "trim_silence_db": "-50dB",
     "internal_silence_min_duration_seconds": 0.3,
-    "gap_within_section_seconds": 0.55,
-    "gap_section_break_seconds": 1.0,
+    "gap_within_section_seconds": 0.4,
+    "gap_section_break_seconds": 0.8,
     "fade_seconds": 0.02,
-    "pacing_note": "Gaps are looser than a Shorts channel's (0.25s/0.4s) -- a 5-7 minute documentary-paced episode doesn't need to stay maximally dense, unlike a 30-60s short."
+    "pacing_note": "Tighter than RedHat (0.55/1.0): a 4-minute video keeps momentum."
   },
   "ambience": {
     "enabled": true,
     "bed_db": -18,
-    "min_gap_seconds": 25.0,
+    "min_gap_seconds": 20.0,
     "max_keyword_cues": 10,
+    "reveal_section": "raaz",
     "keywords": {
-      "distant_thunder": [
-        "thunder*",
-        "lightning",
-        "storm*"
-      ],
-      "fire_crackle": [
-        "fire",
-        "fires",
-        "flame*",
-        "furnace*",
-        "forge*",
-        "blaze*"
-      ],
-      "water": [
-        "river*",
-        "water*",
-        "ocean*",
-        "sea",
-        "flood*",
-        "rain*"
-      ],
-      "metal_clang": [
-        "hammer*",
-        "anvil*",
-        "iron",
-        "steel",
-        "chain*",
-        "gear*"
-      ],
-      "paper_rustle": [
-        "patent*",
-        "letter*",
-        "manuscript*",
-        "notebook*",
-        "paper*",
-        "document*",
-        "blueprint*"
-      ],
-      "silence_sting": [
-        "silence",
-        "silent",
-        "stillness"
-      ]
+      "coin_clink": ["पैस*", "रुपय*", "रुपए", "कमाई", "कमात*", "मुनाफ़*", "मुनाफा", "प्रॉफ़िट", "प्रॉफिट", "सिक्क*"],
+      "cash_register": ["बिल", "बिक्री", "बेच*", "ग्राहक*", "कस्टमर*"],
+      "sizzle": ["चाय", "तंदूर", "खाना", "तेल", "कड़ाही", "आग"],
+      "crowd_murmur": ["भीड़", "बाज़ार", "बाजार", "मंडी", "मेला"],
+      "paper_rustle": ["हिसाब", "नोट*", "कागज़*", "कागज*", "किताब*"]
     },
-    "disable": [
-      "wind",
-      "creak",
-      "heartbeat",
-      "footsteps",
-      "whisper",
-      "temple_bell",
-      "drum"
-    ],
-    "note": "No music. A few synthesized effects plus a soft whoosh on every scene cut, at a fixed low gain. Keyword cues are tuned to technology stories (forge, patent paper, lightning, water power). The cold-open bed and heartbeat/footstep/whisper cues are mystery-atmosphere effects and stay disabled for this channel unless an episode asks for them in 02_script/ambience_plan.json.",
+    "disable": ["wind", "creak", "heartbeat", "footsteps", "whisper", "temple_bell", "drum", "distant_thunder", "silence_sting"],
+    "note": "No music. Soft whoosh on every scene cut, a reveal sting on the first [RAAZ] beat, sparse money/food/market keyword cues (Devanagari stems, * = prefix).",
     "transitions": {
       "enabled": true,
-      "variants": [
-        "whoosh_soft_1",
-        "whoosh_soft_2",
-        "whoosh_soft_3"
-      ],
+      "variants": ["whoosh_soft_1", "whoosh_soft_2", "whoosh_soft_3"],
       "gain_jitter_db": 2.0,
-      "skip_sections": [
-        "climax_reveal"
-      ],
-      "note": "A soft whoosh peaks on every scene cut (beat 2 onward), variant + small gain jitter derived from the beat number. Never deduped by min_gap_seconds. Skipped on climax_reveal beats, which get reveal_sting. Disable per episode with 02_script/ambience_plan.json {\"disable\": [\"transition\"]}."
+      "skip_sections": ["raaz"],
+      "note": "Skipped on raaz beats, which get reveal_sting on the first one."
     }
   },
   "format": {
-    "target_runtime_seconds": 360,
-    "target_runtime_range_seconds": [
-      300,
-      420
-    ],
+    "target_runtime_seconds": 240,
+    "runtime_min_seconds": 180,
+    "runtime_max_seconds": 300,
+    "runtime_note": "Hard cap 300 s: stitch_audio.py and finalize_episode.py fail outside 180-300 s. Fix by trimming the script, never by speeding the voice.",
+    "sections": ["hook", "duniya", "khel", "raaz", "sabak"],
     "words_per_minute": 140,
-    "scene_seconds_min": 6,
-    "scene_seconds_max": 10,
+    "words_per_minute_note": "Measured 2026-10-01: hi-IN-MadhurNeural at default rate speaks ~140 Hindi words/min. Budget ~480-600 words for 240 s.",
+    "scene_seconds_min": 5,
+    "scene_seconds_max": 7,
     "fps": 30,
     "zoom_delta": 0.05,
     "animation_stage": "enabled",
-    "animation_stage_note": "Every scene gets a Ken Burns push in/out via ffmpeg zoompan on the static generated image. Direction read from 05_scenes/shotlist.json's \"motion\" field, falling back to alternating in/out. 6-10s per scene: flat whiteboard art has less to look at than a painted scene, so it is cut faster.",
-    "no_intro_outro": "No separate branded intro sting / outro card spliced in. The cold-open beat IS the first scene; the episode ends on the aftermath section's last beat. assemble_episode.py concatenates scene clips directly."
+    "animation_stage_note": "Ken Burns push in/out per scene via ffmpeg zoompan; direction from shotlist 'motion', else alternating.",
+    "no_intro_outro": "No intro sting or outro card. The hook beat is the first scene."
   },
   "captions": {
     "enabled": true,
     "engine": "ass_libass",
-    "engine_note": "Word timing comes from edge-tts's own WordBoundary events, captured in generate_narration_chunks.py / remapped to absolute time in stitch_audio.py's word_timings.json -- no ASR/transcription step. Rendered as an ASS file, burned in via ffmpeg's libass-backed subtitles filter in assemble_episode.py.",
-    "font_family": "DejaVu Sans",
-    "font_family_note": "A locally-installed bold sans (no new dependency).",
+    "title": "Mafia of Business animated captions",
+    "font_family": "Noto Sans Devanagari",
+    "font_family_note": "Installed at /usr/share/fonts/truetype/noto/; libass + HarfBuzz shape conjuncts and matras.",
     "fonts_dir": null,
-    "font_size": 50,
+    "font_size": 58,
     "bold": true,
+    "uppercase": false,
+    "max_chars_per_line": 22,
     "primary_color_ass": "&H00FFFFFF",
-    "highlight_color_ass": "&H003539E5",
-    "highlight_color_note": "A red accent (#E53935), in ASS's &H00BBGGRR byte order. Was violet (#8B5CF6) until 2026-09-29.",
+    "highlight_color_ass": "&H0017A0D4",
+    "highlight_color_note": "Gold #D4A017 in ASS &H00BBGGRR order.",
     "outline_color_ass": "&H00000000",
-    "outline_width": 3.0,
+    "outline_width": 3.5,
     "shadow_depth": 1.2,
     "alignment": 2,
-    "alignment_note": "ASS numpad alignment: 2 = bottom-center anchor. Actual vertical position is set by margin_v_ratio below.",
     "margin_v_ratio": 0.12,
-    "margin_v_note": "Fraction of video height kept clear below the caption's baseline -- lower than Dmoo Way's 0.30 because a 16:9 horizontal video has no bottom-of-screen platform UI (like/comment/share cluster) to clear.",
     "safe_margin_side_px": 80,
-    "max_words_per_caption": 5,
+    "max_words_per_caption": 4,
     "min_words_per_caption": 2,
     "max_gap_within_phrase_seconds": 0.2,
-    "max_gap_note": "A phrase never spans a pause longer than this -- prevents captions from gluing the end of one sentence to the start of the next across stitch gaps.",
     "pop_scale_percent": 115,
     "pop_duration_ms": 120,
     "settle_duration_ms": 100,
-    "animation_style": "pop_and_highlight",
-    "animation_style_note": "Each phrase is one ASS line spanning its full on-screen time, re-emitted once per word so the highlighted word can move across otherwise-static text."
+    "animation_style": "pop_and_highlight"
   },
-  "counters": {
-    "episodes_published": 5,
-    "buffer_ready": 0
+  "thumbnail": {
+    "font_path": "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
+    "accent_rgb": [212, 160, 23],
+    "frame_rgb": [212, 160, 23],
+    "text_rgb": [255, 255, 255],
+    "outline_rgb": [17, 17, 17]
   },
+  "counters": {"episodes_published": 0, "buffer_ready": 0},
   "active_experiment": null,
   "baselines": {
-    "completion_rate_30d": null,
-    "shares_30d": null,
-    "saves_30d": null,
-    "follows_30d": null,
-    "baselines_note": "Average view duration and click-through rate are the primary signals: early analytics showed retention, not quality, was the weak point on the old explainer videos."
+    "ctr_30d": null,
+    "avg_view_duration_30d": null,
+    "baselines_note": "Filled by the operator from YouTube Studio; never invented by the agent."
   }
 }
