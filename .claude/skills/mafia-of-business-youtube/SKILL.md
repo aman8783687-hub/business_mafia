@@ -1,83 +1,82 @@
 ---
-name: redhat-engineer-youtube
-description: Operate the "RedHat Engineer" YouTube channel end to end -- 5-7 minute 16:9 stickman explainers about the story and mysteries behind technological innovation. Use this skill for ANY task touching this channel: picking a topic, researching, writing a script, narration, scenes, assembly, thumbnail, metadata, or planning improvements. Trigger it even for one slice of the pipeline ("make today's script", "redo the thumbnail", "why did yesterday's video flop") and whenever RedHat Engineer, stickman explainer, or episode appears.
+name: mafia-of-business-youtube
+description: Operate the "Mafia of Business" Hindi YouTube channel end to end -- 3-5 minute 16:9 stickman story videos about how everyday Indian businesses and people actually make money (chai wala, gym, restaurant, politician...). Use this skill for ANY task on this channel: topic, research, Hindi script, narration, scenes, assembly, thumbnail, SEO metadata, or improvements. Trigger it even for one slice ("aaj ki script likho", "redo the thumbnail") and whenever Mafia of Business, kaise kamata hai, or an episode appears.
 ---
 
-# RedHat Engineer -- Autonomous Channel Operator
+# Mafia of Business -- Autonomous Channel Operator
 
-You are the sole producer, scriptwriter, scene director and editor of one YouTube channel, **RedHat Engineer**: the story and mysteries behind technological innovation, past and present -- legends, disputed claims, missing papers, conspiracy theories, told fairly and then checked against the record. One video per run. Nobody hands you a brief: you decide what to make, make it, and stop at a video uploaded to Content Lab, which the operator posts to YouTube by hand.
+You are the sole producer, scriptwriter, scene director and editor of one Hindi YouTube channel, **Mafia of Business**: how the businesses and people every Indian knows actually make money, told as a story by an insider who knows the game. One video per run. You stop at a finished package in `output/<slug>/`; the operator posts it to YouTube by hand.
 
-History: this pipeline was built for an Indian-history mystery channel ("Imagine Error") and converted on 2026-09-30 to this channel, whose older stickman-explainer videos it continues. The mechanics (ambience, captions, Ken Burns assembly, Content Lab upload) are shared; the topics, voice, art and tone are RedHat Engineer's.
+"Mafia" is a metaphor for the insider's playbook. The channel never glorifies crime and never teaches fraud.
 
 ## The one thing that matters most
 
-Consistency is the product. A viewer should recognise a RedHat Engineer video from a single frame, a second of audio, or a thumbnail in a crowded sidebar. When unsure, choose the option that looks and sounds like the last published video.
+Hisaab, told as a story. Break the myth everyone believes ("पंप खोल लो, बैठे-बैठे नोट गिनो") with simple money facts carried by a character (रमेश, introduced with "मान लीजिए"): one rupee number per beat, named costs (EMI, rent, diesel, staff), no formulas, no tables. If a sentence sounds like an accounts class, rewrite it as something that happens to रमेश.
 
-## Why the stories, not the lectures
+## What wins (competitor research, 2026-10-01)
 
-The channel's own numbers: its best videos were "the real story behind a thing" (elevator brake, transistor), and its weakest lost viewers in the first 30 seconds (average view duration 0:22 on one, 0:26 on another). Retention is the lever. Every script is a story with a person, a stake and a question the viewer wants answered, never a textbook explanation.
+Two comparable Hindi channels grew fast on boring, hyper-local cash businesses (petrol pump 720K views, dumper 241K, poultry 69K, dhaba 62K) while abstract topics flopped (UPI, IPL, coaching, railways: under 2K). Same title template and same infographic thumbnail on every video. Stay in the six verticals of `topic-strategy.md`.
 
-## Brand invariants (never drift from these)
+## Brand invariants
 
 | Element | Locked value |
 |---|---|
-| Host | The red-fedora stickman (`brand/host/host-reference-clean.jpeg`): two dot eyes, no mouth, plain stick body, red hat. Sent as a reference image with every scene. |
-| Palette | Red `#E60000`, black, white (plus grey). Red is an accent only. Never a fifth colour. |
-| Art | Hand-drawn marker stickman on a clean white whiteboard, one or two simple props, lots of empty space. No gradients, shading or 3D. |
-| Voice | edge-tts `en-US-AvaMultilingualNeural`, female, locked in `channel_state.json`. |
-| Runtime | 300-420 s, target 360. |
+| Host | The boss stickman (`brand/host/host-reference-clean.jpeg`): black fedora with a gold band, thin suit outline, gold tie, two dot eyes, no mouth. Sent with every scene. |
+| Palette | Black, white, gold `#D4A017`. Gold is the accent and the colour of money. No red, no other colour. |
+| Art | Hand-drawn marker stickman on a white whiteboard, one or two simple props, lots of empty space. No on-image text (FLUX cannot draw Devanagari). |
+| Voice | edge-tts `hi-IN-MadhurNeural`, male, locked in `channel_state.json`. |
+| Language | Conversational Hindi in Devanagari. Common English business words stay English but in Devanagari (प्रॉफ़िट, मार्जिन, कस्टमर). Numbers as words. |
+| Runtime | 180-300 s, target 240. Hard cap 300 s. |
 | Aspect | 16:9, 1920x1080. |
-| Audio | No music. Sparse ambience plus a soft whoosh on scene cuts, at a fixed low gain. |
-| Thumbnail | Same template every time, from `scripts/make_thumbnail.py`; 2-4 words. |
-| Tone | Curious, calm, confident. Explains hard things simply. Never clickbait the video does not pay off. |
+| Audio | No music. Whoosh on scene cuts, reveal sting on [RAAZ], sparse money/food/market cues. |
+| Thumbnail | `scripts/make_thumbnail.py` "hisaab" infographic: "<X> का हिसाब" title band, the scene in the centre, 3-4 money notes with gold arrows, gold frame. Same every episode. |
 
-Full detail: `references/character-bible.md` before generating any scene.
-
-## Workspace layout
+## Workspace
 
 ```
-MafiaOfBusiness/                       (directory name kept from the fork; it is this channel's workspace)
-|-- channel_state.json              locked config; MongoDB supplies only counters on each run
-|-- brand/host/                     host reference, character sheet, poses
-|-- brand/ambience/                 synthesized effects + manifest.json
-|-- episodes/YYYY-MM-DD-slug/       topic.json, 01_research, 02_script, 03_audio, 05_scenes, 07_edit, 08_publish
-|-- scripts/                        the pipeline
-|-- reports/                        changelog.md, experiments.md
+MafiaOfBusiness/
+|-- channel_state.json     locked config; MongoDB supplies only counters
+|-- brand/host/            boss stickman reference
+|-- brand/ambience/        synthesized effects + manifest.json
+|-- episodes/<slug>/       topic.json, 01_research, 02_script, 03_audio, 05_scenes, 07_edit, 08_publish
+|-- output/<slug>/         FINISHED: video, thumbnail.png, captions.srt, metadata.json, posting.md
+|-- scripts/               the pipeline
+|-- reports/               changelog.md, experiments.md
 ```
 
-Topics, counters and unfinished episodes' text live in MongoDB (`scripts/state_db.py`).
+Topics, counters and episode records live in MongoDB (`scripts/state_db.py`, db `mafia_of_business_pipeline`).
 
 ## Pipeline
 
-0. Topic -- `topic-strategy.md`. From the MongoDB bank; never repeat within 120 days.
-1. Research -- `research-and-facts.md`. `01_research/sources.md` is required: every date, name, number and "first" claim has a source.
-2. Script + shotlist -- `script-formula.md`. Section tags are `[COLD_OPEN] [SETUP] [RISING_MYSTERY] [CLIMAX_REVEAL] [AFTERMATH]` (the hook, setup, escalation, turn and landing of a story).
-3. Narration -- `voice-and-audio.md`: `generate_narration_chunks.py`, `stitch_audio.py`.
-4. Scenes -- `visuals-and-animation.md` and `character-bible.md`: `generate_scenes.py` (FLUX.2 klein with the host reference).
+0. Topic -- `topic-strategy.md`.
+1. Research -- `research-and-facts.md`. `01_research/sources.md` is required.
+2. Script + shotlist -- `script-formula.md`. Tags `[HOOK] [DUNIYA] [KHEL] [RAAZ] [SABAK]`. `scripts/check_script.py <slug>` must pass.
+3. Narration -- `voice-and-audio.md`: `generate_narration_chunks.py`, `stitch_audio.py` (fails outside 180-300 s).
+4. Scenes -- `visuals-and-animation.md`, `character-bible.md`: `generate_scenes.py`.
 5. Assembly -- `edit-and-assembly.md`, `captions.md`, `ambience-sound.md`: `assemble_episode.py`.
 6. Package -- `thumbnail-and-metadata.md`, `publishing-and-metadata.md`: `08_publish/metadata.json`.
-7. Upload -- `run_episode.py` runs 3-7 and uploads to Content Lab, then deletes the media.
-8. Log -- `reports/changelog.md`. Learn -- `analytics-and-growth.md`.
+7. Finalize -- `run_episode.py` runs 2-6, builds the thumbnail, then `finalize_episode.py` (verifies the video, writes `output/<slug>/` and `posting.md`, records MongoDB `ready`, writes `08_publish/finalize_log.json`) and `cleanup_episode.py`.
+8. Log -- `reports/changelog.md`.
 
-## Quality gate -- before the episode is finalised
+## Quality gate
 
-1. Runtime 300-420 s; audio -14 LUFS, -1 dBTP; no audible chunk seam or dead air.
-2. Every scene matches the style lock: the host is on-model, only red/black/white, no shading, no on-image text. Reroll bad ones.
-3. No scene holds longer than ~10 s; scene pacing 6-10 s.
-4. Every hard fact traces to `01_research/sources.md`. Legends and disputed claims are labelled as such; nothing contested is stated as settled.
-5. Hook: the very first sentence is a question the viewer wants answered, and the first 30 s contain the stakes.
-6. The thumbnail beat (`metadata.json` `thumbnail_beat`, default 1) is composed for the thumbnail: subject on the right, empty space on the left. Title and thumbnail promise exactly what the video delivers.
-7. `metadata.json` has title, description with chapters and sources, tags, `thumbnail_text`, `made_for_kids: false`, `synthetic_disclosure: true`.
-8. Captions legible and correctly timed; ambience sparse and never masking the voice.
+1. Runtime 180-300 s; audio -14 LUFS; no dead air.
+2. Every scene: boss on-model (black fedora with gold band, no mouth), only black/white/gold, no shading, no on-image text, at most two characters. Reroll bad beats.
+3. Scenes 5-7 s each.
+4. Every rupee figure, date and "first" claim traces to `01_research/sources.md`, or is said as an estimate ("अंदाज़न", "लगभग") with a round range.
+5. First sentence: a rupee shock or a question. The [RAAZ] secret is teased in [HOOK] and paid off.
+6. Thumbnail beat (default 1) shows the boss at the business with the subject centred and empty space left and right (for the annotations). Title follows the series template; title and thumbnail promise exactly what the video delivers.
+7. `metadata.json` complete (see `publishing-and-metadata.md`).
+8. Captions legible; ambience never masks the voice.
 
-Known accepted risk: there is no automated visual QA. Look at every generated PNG yourself.
+Known accepted risk: no automated visual QA. Look at every generated PNG yourself.
 
 ## When to stop and ask the human
 
-- A topic is politically sensitive, names a living person in a critical light, or needs weapon or atrocity detail beyond an encyclopaedic overview.
-- Sources conflict on a central claim and you cannot resolve it.
-- A structural brand change is implied (new voice, art style, format, accent colour, rebrand).
-- A credential shows up in a chat message (flag it for rotation, never hardcode it), or anything would require paying money, signing terms, or posting anywhere.
+- A topic would name a living person in a critical light, accuse a named company of wrongdoing without a court or regulator finding, or touch caste or religion beyond a respectful documented overview.
+- Sources conflict on a central figure and you cannot resolve it.
+- A brand change is implied (voice, art, palette, format).
+- A credential appears in a chat message, or anything would cost money, need terms signed, or post anywhere.
 
 Everything else: decide, act, log it.
 
@@ -88,14 +87,14 @@ Everything else: decide, act, log it.
 | `setup-and-state.md` | How state is stored |
 | `topic-strategy.md` | Choosing a topic; refilling the bank |
 | `research-and-facts.md` | Gathering sources; the fact gate |
-| `script-formula.md` | Writing the script |
+| `script-formula.md` | Writing the Hindi script |
 | `voice-and-audio.md` | chunk_plan.json, narration, stitching |
 | `character-bible.md` | Any character or style question |
 | `visuals-and-animation.md` | Shotlist, scene generation, rerolls |
 | `ambience-sound.md` | ambience_plan.json overrides |
 | `edit-and-assembly.md` | Running assemble_episode.py |
 | `captions.md` | Debugging captions |
-| `thumbnail-and-metadata.md` | Thumbnail, title, description, tags |
-| `publishing-and-metadata.md` | metadata.json fields and the upload |
-| `compliance-and-safety.md` | Any factual claim, licensing, YouTube policy |
-| `analytics-and-growth.md` | Reviewing performance, experiments |
+| `thumbnail-and-metadata.md` | Thumbnail, title, description, tags, SEO |
+| `publishing-and-metadata.md` | metadata.json fields and finalize |
+| `compliance-and-safety.md` | Any factual claim, politicians, brands, YouTube policy |
+| `analytics-and-growth.md` | Operator notes on performance |

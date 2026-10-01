@@ -9,9 +9,9 @@ reference). The reply is JSON with a base64 image at result.image. The
 endpoint has no negative_prompt, guidance or steps parameters -- the look
 comes from the style suffix plus the reference image.
 
-Why this backend and not raphael/cloudflare-SDXL: the stickman host only
-stays on-model when a reference image is sent with every request, and
-neither of those can do that.
+Why this backend and not cloudflare-SDXL: the stickman host only stays
+on-model when a reference image is sent with every request, and SDXL
+cannot do that.
 
 Free tier is 10,000 neurons/day, so a long episode can need a second day
 of reruns; generate_scenes.py skips finished beats. A fatal error (bad

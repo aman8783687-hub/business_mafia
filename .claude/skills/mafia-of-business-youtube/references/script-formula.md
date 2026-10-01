@@ -1,91 +1,66 @@
-# Script formula
+# Script formula (Hindi)
 
-The script is the video. Animation quality raises a good script; it cannot rescue a boring one. Assume the viewer's thumb is hovering over the back button for the entire runtime and write accordingly.
+The script is the video. Assume the viewer's thumb is over the back button the whole time.
 
 ## Specs
 
-- **Length:** 700–950 words for a 5–7 minute video at ~140 words/minute. Count words, then check the estimate against the actual voiceover duration after stage 3.
-- **Sentences:** short. Average 12–16 words. Vary rhythm — a three-word sentence after a long one lands like a drumbeat.
-- **Voice:** second person and present tense wherever possible. "You're standing in a workshop in 1947" beats "In 1947, researchers were working…"
-- **No filler:** delete "in this video we will", "without further ado", "let's dive in", "as we all know". They cost you the exact seconds you can least afford.
-- **Story over lecture:** this is a story channel, not an educational channel. Favor the people, the rivalry, the accident, the stakes — over explaining how something works. If a sentence reads like a textbook ("this works because…", "the process involves…"), rewrite it as something that happened to someone.
+- **Length:** about 480-600 Hindi words for 240 s (`hi-IN-MadhurNeural` speaks ~140 words/min). `stitch_audio.py` fails over 300 s or under 180 s: trim or add, never speed the voice.
+- **Language:** conversational Hindi in Devanagari, the way people talk at a chai stall, not textbook shuddh Hindi. English business words stay English but in Devanagari: प्रॉफ़िट, मार्जिन, कस्टमर, ब्रांड.
+- **Numbers as words:** "दस रुपये", "पचास हज़ार", "दो लाख". Never digits (`check_script.py` rejects them).
+- **Hisaab, not math:** one rupee number per beat, carried by the character. Named costs (ईएमआई, किराया, डीज़ल, स्टाफ़, बिजली) are good. No formulas, no stacked percentages, no tables.
+- **Voice:** second person, present tense. "आप सुबह पाँच बजे दुकान खोलते हैं..." beats "दुकानदार सुबह दुकान खोलता था".
+- **Sentences:** short. Vary rhythm. A three-word line after a long one lands hard: "और यहीं है खेल।"
+- **No filler:** no "नमस्कार दोस्तों", no "आज के इस वीडियो में", no channel intro. They cost the seconds you can least afford.
+- **No calculations on screen or in speech:** if a number needs a calculation to understand, replace it with a comparison ("एक कप पर जितना कमाता है, उतने में आपका बिस्कुट आता है").
 
 ## Structure
 
-### 1. Hook (0:00–0:15) — the most important 15 seconds you will write
-No logo, no intro, no greeting, and no intro sting or outro card in the edit: the video starts at 0:00 with the hook. **The very first sentence is a question** (the viewer's own question, or the one the story answers). Patterns that work, each phrased so it opens on or quickly lands on that question:
+### [HOOK] (0:00-0:20) -- myth, then one number
+Open on the belief everyone has, then break it with one number, then tease the secret:
+- "पेट्रोल पंप खोल लो, बैठे-बैठे नोट गिनो... सुनने में कितना आसान लगता है ना?"
+- "पर पंचानवे रुपये के पेट्रोल में मालिक को मिलते हैं सिर्फ़ साढ़े चार रुपये।"
+- "और आख़िर में वो एक बात, जिस पर पूरा धंधा टिका है।"
 
-- **The absurd fact:** "This lump of glass and metal was more valuable than the entire building it sat in."
-- **The stakes flip:** "In 1943, this machine was so secret that the men building it weren't told what it did."
-- **The reframe question:** "Why did it take humanity 5,000 years to put wheels on a suitcase?"
-- **The impossible before/after:** "Before this, a message took three weeks to cross the Atlantic. After it: seven minutes."
+### [DUNIYA] (0:20-1:00) -- the character and the setup
+Introduce a hypothetical owner with a common name, always as an example: "मान लीजिए रमेश..." (never presented as a real person). What he invests, where, why he started. Put the viewer there: "आपने भी देखा होगा..."
 
-Then a one-line promise of the journey — what the viewer will understand by the end — and go. Nothing interrupts the hook: the setup follows straight on.
+### [KHEL] (1:00-3:00) -- पैसा कहाँ बनता है, कहाँ डूबता है
+First the money coming in, then the leaks: EMI, rent, staff, bijli, diesel, wastage, udhaar. Each leak is a small scene with रमेश and one rupee number. Include one comparison (highway vs gaon, small vs big, good month vs bad month).
 
-### 2. Setup (0:15–1:15)
-Establish the world before the invention. Make the problem *felt*, not stated: the cost, the danger, the daily annoyance. The viewer should want the solution before it arrives.
+### [RAAZ] (3:00-3:45) -- the hero product or the hidden twist
+The one non-obvious thing the business really runs on: the dal that carries the dhaba, the papad bought at डेढ़ रुपये and sold at दस, the tanker that must be paid before a single litre is sold, the one bad month that sinks a dumper owner. Slow down. Pay off the hook's tease explicitly.
 
-### 3. Escalation (1:15–4:00)
-Three to five beats, each ending in a small turn. Structure each beat as: attempt → obstacle → consequence. This is where you deploy:
-- **Concrete comparisons** — not "very fast", but "faster than a message could physically travel for the previous 3,000 years."
-- **Human moments** — the rivalry, the stubbornness, the accident. These carry the video, not the mechanics.
-- **The mechanism, kept light** — if the story needs *how* it worked, land it in one sentence with a visual metaphor a stickman can act out, then move straight back to what happened next. It's seasoning, not a required checkbox — never let an explanation run long enough to feel like class.
+### [SABAK] (last 20-40 s) -- rules and the payoff
+Two or three simple rules (मेन्यू छोटा रखो, इमरजेंसी फ़ंड, बार-बार आने वाला ग्राहक मार्जिन से बड़ा). The payoff line: "ये धंधा पेट्रोल का नहीं, कैश-फ़्लो और भरोसे का है।" One specific comment question ("आपके शहर में एक प्लेट मोमो कितने की है?"). Name the next episode ("अगली बार: डंपर वाले का पूरा हिसाब"). Ask for the subscribe once, about the series.
 
-### 4. The turn (4:00–5:15)
-The consequence nobody expected. The second-order effect, the misuse, the industry it accidentally killed, the problem it created. This is the section that earns shares.
+## Retention rules
 
-### 5. Landing (last 30–45 seconds)
-Tie back to the hook's exact image or phrase — closing the loop is what makes a video feel *finished*. End on a forward-looking thought, then a specific next-video pointer ("the machine that replaced it is the story of the next video") rather than a generic "like and subscribe". Ask for the subscribe once, in one sentence, and make it about the series, not about you.
-
-## The mystery structure (default for this channel)
-
-Layer this over the five sections above. It is what keeps a 6-minute story watchable:
-
-- **HOOK:** open on the *question* (rule above), then promise the ending honestly: "you'll know what the record proves, what is legend, and what nobody can answer". That promise is the main reason to stay.
-- **Open loops:** plant two or three (the wildest theory is coming; one detail still bothers people) and close each one before the end.
-- **Theory, then check:** for every theory, one beat that states it and one or two beats that test it. Never state a theory and leave it standing, and never debunk one without first giving it a fair hearing.
-- **Sourced tone:** quote documents word for word only when the wording is in `sources.md`. Say "we could not trace it to any record" instead of repeating an unsourced anecdote as fact.
-- **The twist near the end:** the real ending is usually more interesting than the myth (something that did arrive by another route, or the narrow gap that is still unexplained).
-- **Close the loop on the hook question,** then invite one specific comment ("which theory did you believe before today?") and point to the next episode.
-
-## Retention discipline
-
-- Mark your script at 30-second intervals. At each mark, ask: *what changed in the last 30 seconds?* If the answer is "nothing, I was explaining", inject a turn, a question, a jolt of scale, or a hard cut to a new visual idea.
-- Open loops early, close them late: "we'll come back to that mistake" — and actually come back.
-- Never stack more than two abstract sentences without an image the animation can literally show. If you can't picture the stickman doing it, rewrite it.
-- Kill the second-best example. Two great examples beat four decent ones.
+- Mark the script every 30 seconds (~70 words). At each mark ask: what changed? If nothing, add a turn, a question to the viewer, a new character or a new place.
+- Never stack two abstract lines without something the stickman can act out.
+- Kill the second-best example. Three great leaks beat five okay ones.
+- Every estimate is said as one: "अंदाज़न", "लगभग", with a round range.
 
 ## Format of `02_script/script.md`
 
-Write the script as numbered narration beats so the shotlist and audio chunks map cleanly:
-
 ```markdown
-# [Working title]
-Target runtime: 6:00
+# चाय वाला असल में कितना कमाता है
+Target runtime: 4:00
 
-[COLD_OPEN]
-1. This lump of glass and metal was worth more than the building around it.
-2. And in nineteen forty-seven, almost nobody knew it existed.
+[HOOK]
+1. दस रुपये की चाय, इसमें क्या कमाई... सुनने में तो यही लगता है ना?
+2. पर बनाने में लगते हैं सिर्फ़ तीन रुपये। और असली कमाई चाय से होती भी नहीं। वो राज़ आख़िर में।
 
-[SETUP]
+[DUNIYA]
 3. ...
 
-[RISING_MYSTERY]
+[KHEL]
 ...
 
-[CLIMAX_REVEAL]
+[RAAZ]
 ...
 
-[AFTERMATH]
+[SABAK]
 ...
 ```
 
-The five tags are fixed: `COLD_OPEN` is the hook (0:00-0:15), `SETUP` the setup, `RISING_MYSTERY` the escalation (the bulk of the video), `CLIMAX_REVEAL` the turn, `AFTERMATH` the landing. `generate_narration_chunks.py` uses them to pick the voice preset and the ambience planner uses them to place the reveal sting.
-
-Each numbered line is 1–3 sentences — this is also the unit you will hand to the TTS in stage 3, so keep every line comfortably under 30 seconds when read aloud (roughly 60–70 words maximum, ideally 25–45).
-
-Alongside the script, write `02_script/shotlist.json`: for each numbered beat, a one-line visual description. Do this while the writing is fresh — it's the bridge to stage 5. This is a **draft** — stage 5 rebuilds it into the authoritative `05_scenes/shotlist.json` once real beat timing exists; don't expect this early version to still be read by later scripts.
-
-## Read-back test
-
-Read the finished script aloud at speaking pace before generating audio. Three things you're listening for: tongue-twisters the TTS will mangle, sentences that need a breath in the middle (split them), and any paragraph where your own attention drifts (cut it).
+Beat numbers are ASCII digits followed by a dot; narration text has no digits. Run `python3 scripts/check_script.py <slug>` after writing.

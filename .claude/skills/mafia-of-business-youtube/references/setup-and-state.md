@@ -1,21 +1,21 @@
 # State
 
-`channel_state.json` is the single source of truth for anything that must not drift; MongoDB holds the topic bank and the small text state that has to survive between GitHub Actions runs.
+`channel_state.json` is the single source of truth for anything that must not drift; MongoDB holds the topic bank and the small text state that has to survive between runs.
 
 ## `channel_state.json`
 
 Locked config, loaded by every script through `scripts/state.py`'s `load_state()`:
 
-- `voice`: edge-tts voice id and the per-section rate/volume/pitch presets (`cold_open`, `setup`, `rising_mystery`, `climax_reveal`, `aftermath`), chunk limits.
-- `style_lock`: the image prompt suffix, aspect `16:9`, resolution `1920x1080`, reference dataset, generation notes.
-- `audio`: loudness target (-14 LUFS), true peak, silence-trimming values, gaps.
-- `format`: runtime target and hard range (`target_runtime_range_seconds`, 300-420), words per minute, scene length, fps, zoom, `video_maxrate`.
-- `ambience`: keyword cues, `disable` list (channel-wide), scene-cut whooshes.
-- `counters`: `episodes_published`, bumped once per episode by `publish_all.py`.
+- `voice`: edge-tts voice id (`hi-IN-MadhurNeural`), the per-section rate/volume/pitch presets (`hook`, `duniya`, `khel`, `raaz`, `sabak`), `default_section`, chunk limits.
+- `style_lock`: the image prompt suffix (boss stickman, black/white/gold), aspect `16:9`, resolution `1920x1080`.
+- `audio`: loudness target (-14 LUFS), true peak, silence trimming, gaps.
+- `format`: `runtime_min_seconds` 180, `target_runtime_seconds` 240, `runtime_max_seconds` 300, `sections`, scene length 5-7 s, fps, zoom.
+- `ambience`, `captions`, `thumbnail`: effect keywords, caption style, thumbnail colours and font.
+- `counters`: `episodes_published`.
 
-Anything that must be identical across videos lives here, not in your head and not as a second copy inside a script or doc. Any change to a locked value gets a dated line in `reports/changelog.md` with the reason. If a value in state contradicts what you were about to do, state wins.
+Anything that must be identical across videos lives here, not in a doc or a second copy in a script. Any change to a locked value gets a dated line in `reports/changelog.md` with the reason. If state contradicts what you were about to do, state wins.
 
-## MongoDB (database `imagine_error_pipeline`, name kept from the fork so existing counters, slots and used-topic history carry over)
+## MongoDB (database `mafia_of_business_pipeline`; `MONGODB_DB` overrides)
 
 `scripts/state_db.py` is the only interface:
 
@@ -23,17 +23,18 @@ Anything that must be identical across videos lives here, not in your head and n
 |---|---|
 | `topics [queued\|used\|rejected]` | list topics (default queued) |
 | `topics-count` | how many topics per status |
-| `topic-add` | add queued topics: a JSON object or list on stdin, each needing `topic` and `category` plus `setting`, `score`, `angle`, `visual_hooks` |
+| `topic-add` | add queued topics: a JSON object or list on stdin, each needing `topic` and `category` plus `setting`, `myth`, `angle`, `visual_hooks`, `score`, `keywords` |
 | `topic-use "<name>"` | queued -> used, stamped with today's date |
 | `topic-reject "<name>" "<why>"` | -> rejected |
-| `recent [N]` | recently made episodes with status |
-| `pull` / `push` | run start / run end (the workflow's `run_cycle.sh` does both) |
+| `recent [N]` | recently made episodes with status (`pending`, `ready`, `posted`) |
+| `episode-posted <slug> <url>` | the operator marks a finalized episode as posted |
+| `pull` / `push` | run start / run end (`run_cycle.sh` does both) |
 
-Collections: `topics`, `episodes` (script, shotlist, chunk plan, metadata, `01_research/sources.md`, `08_publish/upload_log.json` for each episode), `state` (`channel_state`), `slots`.
+Collections: `topics`, `episodes` (script, shotlist, chunk plan, metadata, `01_research/sources.md`, `08_publish/finalize_log.json`, plus `output_dir` and status), `state` (`channel_state`).
 
-At the start of a run `pull` restores the text files of unfinished episodes and takes only the live keys (`counters`, `baselines`, `active_experiment`) from MongoDB. Everything else in `channel_state.json` comes from git, so a config change (voice, style, format) ships with the commit and a stale database copy can never undo it; an empty database is seeded once from `seed/topic_bank.seed.json` and `channel_state.json`. At the end `push` saves counters and episode text. Only text is stored: audio, images and video never go to the database.
+At the start of a run `pull` restores the text files of unfinished episodes and takes only the live keys (`counters`, `baselines`, `active_experiment`) from MongoDB; all other config comes from git, so a config change ships with the commit and a stale database copy can never undo it. An empty database is seeded once from `seed/topic_bank.seed.json`. At the end `push` saves counters and episode text; a posted episode is never downgraded. Only text is stored: audio, images and video never go to the database.
 
-Environment (GitHub Actions secrets, or a local `.env` for `make-video`): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (optional `CLOUDFLARE_IMAGE_MODEL`), `MONGODB_URI`, `CONTENT_LAB_URL`, `CONTENT_LAB_API_KEY`; optional `IMAGE_BACKEND` (`flux` default). Nothing is committed to git by the pipeline.
+Environment (`.env` in the repo root, gitignored): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (optional `CLOUDFLARE_IMAGE_MODEL`), `MONGODB_URI`; optional `IMAGE_BACKEND` (`flux` default), `MONGODB_DB`. Nothing is committed to git by the pipeline.
 
 ## Experiment ledger (`reports/experiments.md`)
 

@@ -3,7 +3,7 @@ Consistency comes from every beat sharing the identical style text (see
 channel_state.json's style_lock) and, on the default flux backend, from the
 host reference image that scenes/flux_orchestrator.py sends with each
 request. negative_prompt/cfg/steps are carried in the plan only for the
-raphael/cloudflare-SDXL fallback backends; FLUX.2 klein ignores them."""
+cloudflare-SDXL fallback backend; FLUX.2 klein ignores them."""
 from __future__ import annotations
 
 import hashlib

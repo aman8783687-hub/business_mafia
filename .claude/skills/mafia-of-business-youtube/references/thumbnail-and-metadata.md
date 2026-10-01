@@ -1,75 +1,57 @@
-# Thumbnail, title and metadata
+# Thumbnail, title, metadata and SEO
 
-Packaging decides whether the video gets watched. On a daily channel, it is the highest-leverage 30 minutes of the whole day.
+Packaging decides whether the video is clicked; retention decides whether YouTube shows it to more people. Never trade one for the other: no promise the video does not keep. Same template every episode, so the series is recognisable.
 
-## Thumbnail
+## Thumbnail: the "hisaab" infographic (`scripts/make_thumbnail.py`, run by `run_episode.py`)
 
-**Locked template** (`scripts/make_thumbnail.py`, run by `run_episode.py` from `metadata.json`):
-- 1280x720, PNG, `08_publish/thumbnail.png`.
-- **Scene layout (default when the thumbnail beat's PNG exists):** the episode's own hook scene fills the frame (`thumbnail_beat`, default 1), 2-4 words of title in huge black type with a thick white outline on the left, one word in `#E60000`, red frame. Write that beat with the subject on the right and empty space on the left (see `visuals-and-animation.md`).
-- **Fallback layout:** the host on the left, title on the right, on white.
-- **Text:** 2-4 words, never a full sentence, never a title repeat.
-- **Never:** shocked-face clickbait, red arrows and circles, a fifth colour, small text, anything touching the frame edge (the timestamp overlays the bottom-right corner).
+- White whiteboard, gold frame. Title band on top: `thumbnail_text` = "<X> का हिसाब" (2-4 Devanagari words), `thumbnail_accent_word` = "हिसाब" or the business name, drawn in gold, gold underline.
+- Centre: the thumbnail scene (`thumbnail_beat`, default 1): the boss at the business, subject centred, empty space left and right.
+- `thumbnail_annotations`: 3-4 money notes, each 2-3 words, ~12 characters max, placed left and right with gold arrows: "₹4.5/लीटर", "पहले पेमेंट", "लोन ईएमआई", "दाल = हीरो", "बर्बादी ₹2,500/दिन". Digits and ₹ are fine; **no Latin letters** (the font has none; the script refuses them): write ईएमआई, not EMI. Every figure must be in `sources.md` or said in the video as an estimate.
+- Legibility: open `thumbnail-210x118-preview.png`; if the title band isn't readable at that size, shorten it.
 
-**Text formulas that work:** the contradiction ("TOO SMALL TO SEE"), the stake ("$3 TRILLION IDEA"), the mystery ("NOBODY NOTICED"), the scale ("5,000 YEARS LATE").
+## Title: one series template
 
-**Legibility test:** scale to 210×118 px and look at it. If the words aren't readable and the object isn't identifiable at that size, redo it. Also check it against a dark and a light UI background.
+`<X> वाला असल में कितना कमाता है? | <X in English> Business Profit in Hindi`
 
-Once the channel has enough traffic, use YouTube's built-in thumbnail Test & Compare on videos where two concepts genuinely differ — and feed the winner's pattern back into the template.
-
-## Title
-
-- 45–60 characters so it isn't truncated on mobile.
-- Front-load the interesting word; the last third of a title often gets cut.
-- One clear idea, no ALL CAPS, no more than one piece of punctuation.
-- The title must be a promise the video keeps. Overpromising buys one click and loses a subscriber.
-
-**Formulas:**
-- *The Invention That [Unexpected Consequence]* — "The Invention That Made Cities Possible"
-- *Why [Common Thing] Took [Surprising Time]* — "Why the Wheel Took 5,000 Years to Reach Suitcases"
-- *How [Thing] Actually Works* — reserved for genuinely mechanism-led videos
-- *[Year]: The Machine That [Change]* — "1947: The Machine That Ate the Vacuum Tube"
-- *The [Adjective] History of [Thing]* — use sparingly, it's the most crowded pattern
-
-Write three candidate titles every day and pick one. Log the rejected ones — they're useful for A/B retitling underperformers after 48 hours.
+e.g. `पेट्रोल पंप वाला असल में कितना कमाता है? | Petrol Pump Business Profit in Hindi`. Adapt the Devanagari half to the business ("<X> असल में कितना कमाता है?", "<X> की असली कमाई?"), keep the English half. 45-80 characters. Put two variations in `title_alternates` for YouTube's Test & Compare.
 
 ## Description
 
 ```
-[1–2 sentence hook restating the video's promise, containing the main search term naturally.]
+[Myth hook in Hindi + the main Hinglish search phrase, within the first 150 characters.]
 
-[3–4 sentences on what the video covers.]
+[2-3 Hindi sentences on what the video reveals, without giving away the RAAZ.]
 
 ⏱️ Chapters
-0:00 [Hook line]
-0:xx [Section]
-...
+0:00 [hook label in Hindi]
+0:xx रमेश की कहानी
+0:xx पैसा कहाँ बनता है, कहाँ डूबता है
+0:xx असली राज़
+0:xx सबक
+
+🔍 आपके सवाल (Your Queries):
+[15-20 search phrases, one per line: Hinglish, Devanagari and English variants]
 
 📚 Sources
-- [Source name] — [URL]
-- ...
+- [source] -- [URL]
 
-🎩 RedHat Engineer explains the innovations that built the modern world — one story a day.
-Subscribe: [channel URL]
+🎩 Mafia of Business -- हर धंधे का असली हिसाब, हिंदी में।
 
-▶️ Watch next: [most relevant previous video + link]
-📂 Series playlist: [link]
-
-#hashtag1 #hashtag2 #hashtag3
+#MafiaOfBusiness #BusinessModel #[TopicHashtag]
 ```
 
-The agent cannot look up channel or playlist URLs: leave out the `Subscribe`, `Watch next` and `Series playlist` lines rather than writing `[link]` placeholders; the operator adds them when posting.
+Chapters come from `03_audio/timings.json` section start times; at least four, first at 0:00. Leave out subscribe/playlist links; the operator adds them.
 
-Chapters need at least three timestamps and the first must be 0:00. Sources in the description are a real credibility signal on a history-of-technology channel — never skip them.
+## Tags
 
-## Tags and metadata
+15-25, within YouTube's 500-character limit: the main query in Hinglish, Devanagari and English ("petrol pump kitna kamata hai", "पेट्रोल पंप कितना कमाता है", "petrol pump business profit"), cost/investment variants ("petrol pump investment", "petrol pump dealer margin"), common misspellings, and series terms ("business model in hindi", "Mafia of Business").
 
-The agent writes the tags and the fields in `metadata-and-delivery.md`; the playlist, end screen, pinned comment and other YouTube Studio settings below are done by the operator when posting.
+## Playlist
 
-- 8–15 tags: the exact topic, 2–3 synonyms, the series name, plus format terms (technology history, explained, documentary, animation).
-- Set the video to **Not made for kids**.
-- Set language and caption language; upload the `.srt`.
-- Add to the series playlist and to the "All Episodes" playlist.
-- End screen: subscribe element + one specific next video (the most-related previous episode) + the series playlist.
-- Pinned comment: a one-line extra fact or an honest "what I couldn't fit in" plus a question that invites replies. Post it immediately after publishing — early comment activity is worth having.
-- Set the altered/synthetic content disclosure honestly (see `compliance-and-safety.md`).
+`playlist` = the topic's vertical (`topic-strategy.md`). `posting.md` tells the operator which playlist to add the video to.
+
+## Engagement package (in `metadata.json`, copied into `posting.md`)
+
+- `pinned_comment`: a bonus fact plus a question, in Hindi.
+- `community_post`: a one-line poll ("पेट्रोल पंप मालिक को एक लीटर पर कितना मिलता है? A) ₹20 B) ₹10 C) ₹5 से कम").
+- `shorts_hook`: `{"start": 0.0, "end": <end of the last [HOOK] or first [DUNIYA] beat, 30-55 s>}` from `timings.json`, for a hand-cut Short.

@@ -1,30 +1,30 @@
-# Metadata and publishing
+# Metadata and finalize
 
-The pipeline never posts to YouTube. It uploads the video and its text to Content Lab (Cloudinary storage plus a listing in the RedHat Engineer section); the operator downloads it and posts by hand. Never drive a browser to post.
+The pipeline never posts anywhere. `run_episode.py` ends with `finalize_episode.py`, which copies the package to `output/<slug>/` for the operator.
 
-## `08_publish/metadata.json`
-
-Write it before `run_episode.py`.
+## `08_publish/metadata.json` (write before `run_episode.py`)
 
 | Field | Rule |
 |---|---|
-| `title` | Required. 45-60 characters, interesting word first, one idea, a promise the video keeps (formulas in `thumbnail-and-metadata.md`). Put the real search term in it ("Indus script", "Antikythera mechanism"), not only curiosity. |
-| `description` | Full description from `thumbnail-and-metadata.md`: hook with the main search term, summary, chapters (first at `0:00`, at least three, timestamps from `timings.json` `start` times), sources from `01_research/sources.md`, channel line, hashtags last. |
-| `tags` | 8-15. `RedHat Engineer` is added automatically. |
-| `thumbnail_text` | 2-4 words, uppercase. Without it no thumbnail is made. |
-| `thumbnail_accent_word` | One word from `thumbnail_text`, drawn in red. |
-| `thumbnail_beat` | Scene number used as the thumbnail background (default 1). |
+| `title` | Required. The series template, 45-80 chars (see `thumbnail-and-metadata.md`). |
+| `title_alternates` | The two rejected candidate titles. |
+| `description` | Myth hook with the search phrase in the first 150 chars, summary, chapters, "🔍 आपके सवाल" block, sources, channel line, 3 hashtags. |
+| `tags` | 15-25, Hinglish + Devanagari + English variants, under 500 characters. |
+| `thumbnail_text` | 2-4 Devanagari words. Without it no thumbnail is made and finalize fails. |
+| `thumbnail_accent_word` | One word from `thumbnail_text`, drawn in gold. |
+| `thumbnail_beat` | Scene number for the thumbnail centre (default 1). |
+| `thumbnail_annotations` | 3-4 money notes, Devanagari + digits/₹ only (see `thumbnail-and-metadata.md`). |
+| `playlist` | The topic's vertical. |
+| `pinned_comment` | Bonus fact + question, Hindi. |
+| `community_post` | One-line poll, Hindi. |
+| `shorts_hook` | `{"start": s, "end": s}` from `timings.json`. |
 | `made_for_kids` | `false`. |
 | `synthetic_disclosure` | `true`. |
 
-## The upload
+## Finalize
 
-`run_episode.py` runs `publish_all.py` -> `publish_content_lab.py`: sign, upload to Cloudinary, register `{title, description, tags}` under project `redhat-engineer`. Idempotent by slug; result in `08_publish/upload_log.json`. After a confirmed upload `cleanup_episode.py` removes `03_audio/`, `05_scenes/` and `07_edit/`; `topic.json`, `01_research/`, `02_script/` and `08_publish/` stay.
+`finalize_episode.py <slug>` checks the video (1920x1080, audio present, 180-300 s), copies video, thumbnail, captions.srt and metadata.json to `output/<slug>/`, writes `posting.md` (everything to paste into YouTube Studio plus the posting checklist), records the episode in MongoDB as `ready`, and writes `08_publish/finalize_log.json` (`status: ok`). Then `cleanup_episode.py` deletes `03_audio/`, `05_scenes/`, `07_edit/`. Rerunning finalize on a finished episode does nothing.
 
-Content Lab has no thumbnail field, so the thumbnail (`08_publish/thumbnail.png`) reaches the operator as a GitHub Actions run artifact (see the workflow) and stays in the episode folder on a local run. The operator attaches it when posting.
+If finalize fails, read its message, fix the cause (usually runtime: trim the script and rerun from narration), and rerun `run_episode.py <slug>`.
 
-If the upload fails: read `upload_log.json`, fix the cause, and re-run `python3 scripts/publish_all.py <slug>`; run `cleanup_episode.py` only after it reports ok.
-
-## Limits
-
-The operator posts by hand, so there is no analytics feedback inside the cycle. Do not invent performance numbers.
+After posting, the operator runs `python3 scripts/state_db.py episode-posted <slug> <youtube-url>`.
