@@ -1,7 +1,7 @@
 # Mafia of Business -- pipeline design
 
 Date: 2026-10-01
-Status: draft, awaiting operator review
+Status: approved by operator 2026-10-01
 
 ## 1. Goal
 
@@ -107,9 +107,8 @@ This pipeline uses the same Cloudflare account as RedHat, and the free tier
 is 10,000 neurons a day, shared. A ~45-beat episode can use most of a day's
 quota (on 2026-10-01 the quota was already spent by RedHat before the first
 Mafia of Business image). Consequences:
-- Run at most one episode across both channels per day on the free tier, or
-  move this channel to its own Cloudflare account (operator's choice; only
-  `.env` changes).
+- Resolved: this channel has its own Cloudflare account (see section 10),
+  so it no longer competes with RedHat.
 - `generate_scenes.py`'s existing quota stop plus skip-finished-beats means a
   stopped run resumes the next day with `./make-video`.
 
@@ -370,8 +369,8 @@ New:
 Decided 2026-10-01: no Content Lab (local `output/` + MongoDB only); no
 GitHub repo for now (local git only).
 
-Open:
-1. Approve the boss stickman reference image (generation is blocked until
-   the shared Cloudflare quota resets at 00:00 UTC / 05:30 IST).
-2. Separate Cloudflare account for this channel, or share RedHat's quota
-   (section 3.2).
+Also decided 2026-10-01:
+- Boss stickman: variant 1 of 4 (seed 11, cleanest strokes, closest to the
+  RedHat line style), saved as `MafiaOfBusiness/brand/host/host-reference-clean.jpeg`.
+- Own Cloudflare account for this channel (own 10,000-neuron daily quota),
+  in this repo's `.env`.
