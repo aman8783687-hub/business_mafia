@@ -152,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print("No word_timings.json -- proceeding without burned-in captions.")
 
-    output_path = edit_dir / f"redhat-engineer-{slug}-episode.mp4"
+    output_path = edit_dir / f"mafia-of-business-{slug}.mp4"
     cmd = ["ffmpeg", "-y", "-i", str(body_silent), "-i", str(mastered_audio)]
     if captions_ass_path:
         cmd += ["-filter_complex", caption_filter(str(captions_ass_path)), "-map", "[v]", "-map", "1:a"]
@@ -163,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
     # so a quality target (CRF) with a cap (maxrate/bufsize) lands around
     # 3-5 Mbps average instead of pinning every frame to 10 Mbps. At a
     # 300-420s runtime, a flat 10M/10M encode produced ~400-450MB files --
-    # well over Cloudinary's 100MB single-request upload cap. The
+    # needlessly large for a local file. The
     # LOW_MEM_RENDER path keeps its own lower flat-bitrate encode
     # unchanged (it's already well under the cap).
     rate_control = (["-b:v", LOW_MEM_BITRATE, "-maxrate", LOW_MEM_BITRATE, "-bufsize", "8M"] if low_mem
