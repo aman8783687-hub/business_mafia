@@ -12,10 +12,15 @@ from __future__ import annotations
 
 import random
 import re
+import unicodedata
 
 
 def _norm(word: str) -> str:
-    return re.sub(r"[^a-z0-9$]", "", word.lower())
+    """NFC, lowercase, keep letters/digits/$ and combining marks. Combining
+    marks matter: Devanagari matras and the nukta are category M, and
+    dropping them turns 'मुनाफ़ा' into 'मनफ'."""
+    word = unicodedata.normalize("NFC", word.lower())
+    return "".join(c for c in word if c.isalnum() or c == "$" or unicodedata.category(c).startswith("M"))
 
 
 def _keyword_index(keywords: dict[str, list[str]]) -> list[tuple[re.Pattern, str]]:
@@ -23,9 +28,9 @@ def _keyword_index(keywords: dict[str, list[str]]) -> list[tuple[re.Pattern, str
     for sfx, patterns in keywords.items():
         for pat in patterns:
             if pat.endswith("*"):
-                regex = re.compile(f"^{re.escape(pat[:-1])}")
+                regex = re.compile(f"^{re.escape(_norm(pat[:-1]))}")
             else:
-                regex = re.compile(f"^{re.escape(pat)}$")
+                regex = re.compile(f"^{re.escape(_norm(pat))}$")
             index.append((regex, sfx))
     return index
 
@@ -65,8 +70,9 @@ def auto_cues(beats: list[dict], words: list[dict] | None, config: dict) -> list
     # 1. A fixed atmosphere cue at the very start -- always present.
     cues.append({"sfx": "wind", "t": beats[0]["start"], "reason": "cold_open_atmosphere"})
 
-    # 2. Reveal sting at the first climax_reveal beat (skip if it's the first beat).
-    reveal_beat = next((b for b in beats if b["section"] == "climax_reveal"), None)
+    # 2. Reveal sting at the first reveal-section beat (skip if it's the first beat).
+    reveal_section = config.get("reveal_section", "climax_reveal")
+    reveal_beat = next((b for b in beats if b["section"] == reveal_section), None)
     if reveal_beat and reveal_beat is not beats[0]:
         cues.append({"sfx": "reveal_sting", "t": reveal_beat["start"], "reason": "reveal"})
         # 3. Heartbeat building in, 2 beats before the reveal if there's room.
@@ -105,7 +111,7 @@ def auto_cues(beats: list[dict], words: list[dict] | None, config: dict) -> list
                     break
     else:
         for b in beats:
-            for token in re.findall(r"[a-zA-Z']+", b.get("text", "")):
+            for token in b.get("text", "").split():
                 normed = _norm(token)
                 for regex, sfx in index:
                     if regex.match(normed):

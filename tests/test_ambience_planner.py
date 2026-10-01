@@ -164,3 +164,40 @@ def test_channel_level_disable_suppresses_fixed_cues():
     config = {"keywords": {}, "disable": ["wind", "heartbeat"]}
     cues = planner.plan(beats, None, config, None, available={"wind", "heartbeat", "reveal_sting"})
     assert {c["sfx"] for c in cues} == {"reveal_sting"}
+
+
+HINDI_CONFIG = {
+    "keywords": {"coin_clink": ["पैस*", "मुनाफ़*"], "sizzle": ["चाय"]},
+    "disable": ["wind", "heartbeat"],
+    "reveal_section": "raaz",
+}
+
+
+def test_norm_keeps_devanagari_matras_and_nukta():
+    assert planner._norm("मुनाफ़ा,") == planner._norm("मुनाफ़ा")
+    assert planner._norm("मुनाफ़ा") not in ("", "मनफ")
+    assert planner._norm("जानेंगे") == "जानेंगे"
+    # precomposed फ़ (U+095E) and फ + nukta compare equal
+    assert planner._norm("फ़") == planner._norm("फ़")
+
+
+def test_hindi_keyword_cues_fire_on_word_timings():
+    beats = [{"beat": 1, "text": "x", "section": "khel", "start": 0.0, "end": 40.0}]
+    words = [{"text": "पैसे", "start": 1.0, "end": 1.3}, {"text": "चाय।", "start": 30.0, "end": 30.4}]
+    cues = planner.plan(beats, words, HINDI_CONFIG, None, available={"coin_clink", "sizzle", "wind", "heartbeat"})
+    assert [(c["sfx"], c["t"]) for c in cues if c.get("keyword")] == [("coin_clink", 1.0), ("sizzle", 30.0)]
+
+
+def test_hindi_keywords_fall_back_to_beat_text():
+    beats = [{"beat": 1, "text": "असली मुनाफ़ा यहाँ है", "section": "khel", "start": 0.0, "end": 5.0}]
+    cues = planner.plan(beats, None, HINDI_CONFIG, None, available={"coin_clink", "sizzle", "wind", "heartbeat"})
+    assert any(c["sfx"] == "coin_clink" for c in cues)
+
+
+def test_reveal_sting_follows_configured_section():
+    beats = [
+        {"beat": i, "text": "x", "section": s, "start": (i - 1) * 10.0, "end": i * 10.0 - 1}
+        for i, s in enumerate(["hook", "duniya", "khel", "raaz", "sabak"], start=1)
+    ]
+    cues = planner.plan(beats, None, HINDI_CONFIG, None, available={"reveal_sting", "wind", "heartbeat"})
+    assert [c["t"] for c in cues if c["sfx"] == "reveal_sting"] == [30.0]

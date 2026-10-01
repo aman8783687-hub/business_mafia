@@ -120,6 +120,34 @@
       "duration": 1.2,
       "gain_db": -4.0,
       "description": "a brief rustle of old paper"
+    },
+    "coin_clink": {
+      "file": "coin_clink.wav",
+      "hit_offset": 0.0,
+      "duration": 0.6,
+      "gain_db": -8.0,
+      "description": "two or three small coins clinking"
+    },
+    "cash_register": {
+      "file": "cash_register.wav",
+      "hit_offset": 0.0,
+      "duration": 0.9,
+      "gain_db": -9.0,
+      "description": "a drawer click and a small register bell"
+    },
+    "sizzle": {
+      "file": "sizzle.wav",
+      "hit_offset": 0.0,
+      "duration": 2.0,
+      "gain_db": -10.0,
+      "description": "a short hot-oil sizzle with a few crackles"
+    },
+    "crowd_murmur": {
+      "file": "crowd_murmur.wav",
+      "hit_offset": 0.0,
+      "duration": 3.0,
+      "gain_db": -12.0,
+      "description": "a low market crowd murmur"
     }
   }
 }

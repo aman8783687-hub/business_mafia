@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-time local generation of Imagine Error's ambience sound library --
+"""One-time local generation of the channel's ambience sound library --
 run this script by hand, commit its output (brand/ambience/*.wav +
 manifest.json), and never run it in CI (the GitHub Actions runner has no
 numpy, matching Dmoo Way's own sfx/synth_library.py precedent). All
@@ -231,6 +231,48 @@ def _paper_rustle(duration=1.2) -> np.ndarray:
     return _peak_normalize(hiss * (bursts + 0.05) * _envelope(n, int(SR * 0.02), int(SR * 0.2)))
 
 
+# --- Mafia of Business money/food/market effects (2026-10-01). Appended
+# last so every earlier WAV stays byte-identical on regeneration. ---
+
+def _coin_clink(duration=0.6) -> np.ndarray:
+    n = int(SR * duration)
+    t = np.linspace(0, duration, n)
+    out = np.zeros(n)
+    for start, f in ((0.0, 3100.0), (0.09, 4200.0), (0.17, 3600.0)):
+        i0 = int(SR * start)
+        tt = t[: n - i0]
+        out[i0:] += np.sin(2 * np.pi * f * tt) * np.exp(-tt * 18)
+    return _peak_normalize(out)
+
+
+def _cash_register(duration=0.9) -> np.ndarray:
+    n = int(SR * duration)
+    t = np.linspace(0, duration, n)
+    click = RNG.standard_normal(n) * np.exp(-t * 60) * 0.6
+    bell_start = int(SR * 0.12)
+    tb = t[: n - bell_start]
+    bell = np.zeros(n)
+    bell[bell_start:] = (np.sin(2 * np.pi * 2600 * tb) + 0.5 * np.sin(2 * np.pi * 5200 * tb)) * np.exp(-tb * 6)
+    return _peak_normalize(click + bell)
+
+
+def _sizzle(duration=2.0) -> np.ndarray:
+    n = int(SR * duration)
+    noise = RNG.standard_normal(n)
+    hiss = noise - np.convolve(noise, np.ones(6) / 6, mode="same")
+    crackle = (RNG.random(n) > 0.9993) * RNG.uniform(0.5, 1.0, n)
+    return _peak_normalize((hiss * 0.5 + crackle) * _envelope(n, int(SR * 0.2), int(SR * 0.6)))
+
+
+def _crowd_murmur(duration=3.0) -> np.ndarray:
+    n = int(SR * duration)
+    t = np.linspace(0, duration, n)
+    noise = RNG.standard_normal(n)
+    babble = np.convolve(noise, np.ones(40) / 40, mode="same")
+    swell = 0.6 + 0.4 * np.sin(2 * np.pi * 1.7 * t) * np.sin(2 * np.pi * 0.6 * t)
+    return _peak_normalize(babble * swell * _envelope(n, int(SR * 0.5), int(SR * 0.8)))
+
+
 EFFECTS = {
     "wind": (_wind, -4.0, "a low, filtered windy rumble, loops well as a bed"),
     "creak": (_creak, -6.0, "a single wooden door/floorboard creak"),
@@ -249,6 +291,10 @@ EFFECTS = {
     "drum": (_drum, -2.0, "three low skin-drum hits"),
     "metal_clang": (_metal_clang, -6.0, "a single ringing metal strike"),
     "paper_rustle": (_paper_rustle, -4.0, "a brief rustle of old paper"),
+    "coin_clink": (_coin_clink, -8.0, "two or three small coins clinking"),
+    "cash_register": (_cash_register, -9.0, "a drawer click and a small register bell"),
+    "sizzle": (_sizzle, -10.0, "a short hot-oil sizzle with a few crackles"),
+    "crowd_murmur": (_crowd_murmur, -12.0, "a low market crowd murmur"),
 }
 
 

@@ -36,3 +36,14 @@ def test_boss_stickman_style_lock():
     assert "red" not in suffix.replace("no red", "")
     assert "black fedora" in flux_orchestrator.REFERENCE_INSTRUCTION
     assert "red fedora" not in flux_orchestrator.REFERENCE_INSTRUCTION
+
+
+def test_every_configured_ambience_effect_exists_in_the_manifest():
+    import json
+    from pathlib import Path
+    amb = Path(__file__).resolve().parent.parent / "MafiaOfBusiness" / "brand" / "ambience"
+    manifest = json.loads((amb / "manifest.json").read_text())["effects"]
+    wanted = set(S["ambience"]["keywords"]) | set(S["ambience"]["transitions"]["variants"]) | {"reveal_sting"}
+    assert wanted <= set(manifest), sorted(wanted - set(manifest))
+    for name in wanted:
+        assert (amb / manifest[name]["file"]).stat().st_size > 1000, name
