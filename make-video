@@ -31,7 +31,9 @@ export PATH="$ROOT/.venv/bin:$HOME/.opencode/bin:$PATH"
 for tool in ffmpeg ffprobe opencode; do
   command -v "$tool" >/dev/null || { echo "missing required tool: $tool" >&2; exit 1; }
 done
-fc-list | grep -q "Noto Sans Devanagari" || {
+# Capture first: `fc-list | grep -q` can fail under pipefail (grep exits early, fc-list gets SIGPIPE).
+fonts="$(fc-list)"
+grep -q "Noto Sans Devanagari" <<<"$fonts" || {
   echo "missing font Noto Sans Devanagari (sudo apt install fonts-noto-core)" >&2; exit 1; }
 [ -f .env ] || { echo "missing $ROOT/.env (needs CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, MONGODB_URI)" >&2; exit 1; }
 
