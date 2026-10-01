@@ -29,6 +29,21 @@ TARGET_LUFS = _audio["target_lufs"]
 TRUE_PEAK = _audio["true_peak_db"]
 SCENE_SECONDS_MIN = STATE["format"]["scene_seconds_min"]
 SCENE_SECONDS_MAX = STATE["format"]["scene_seconds_max"]
+RUNTIME_MIN = STATE["format"]["runtime_min_seconds"]
+RUNTIME_MAX = STATE["format"]["runtime_max_seconds"]
+
+
+def check_runtime(total_seconds: float, min_s: float, max_s: float) -> str | None:
+    """None when the narration fits the channel's runtime window, else the
+    message the agent acts on. Over the cap the fix is a shorter script,
+    never a faster voice (spec 4.3)."""
+    if total_seconds > max_s:
+        return (f"narration {total_seconds:.1f}s is over the {max_s:.0f}s cap: trim the script "
+                f"(~{(total_seconds - max_s) * 140 / 60:.0f} words), then rerun narration and stitch")
+    if total_seconds < min_s:
+        return (f"narration {total_seconds:.1f}s is too short (minimum {min_s:.0f}s): "
+                f"add a money leak to [KHEL], then rerun narration and stitch")
+    return None
 
 
 def normalize_section(name: str) -> str:
@@ -302,6 +317,11 @@ def main():
     else:
         print("No per-chunk .wordbounds.jsonl files found -- word_timings.json not written. "
               "Re-run generate_narration_chunks.py (it now captures word timing) to enable captions.")
+
+    runtime_error = check_runtime(total, RUNTIME_MIN, RUNTIME_MAX)
+    if runtime_error:
+        print(f"ERROR: {runtime_error}", file=sys.stderr)
+        sys.exit(3)
 
 
 if __name__ == "__main__":

@@ -45,3 +45,16 @@ def test_find_out_of_range_beats_reads_bounds_not_hardcoded():
         {"beat": 2, "start": 5.0, "end": 23.0},
     ]
     assert stitch_audio.find_out_of_range_beats(beats, 1.0, 100.0) == []
+
+
+def test_check_runtime_boundaries():
+    assert stitch_audio.check_runtime(180.0, 180, 300) is None
+    assert stitch_audio.check_runtime(300.0, 180, 300) is None
+    msg = stitch_audio.check_runtime(300.5, 180, 300)
+    assert "300.5" in msg and "trim the script" in msg
+    msg = stitch_audio.check_runtime(170.0, 180, 300)
+    assert "170.0" in msg and "too short" in msg
+
+
+def test_runtime_limits_come_from_channel_state():
+    assert (stitch_audio.RUNTIME_MIN, stitch_audio.RUNTIME_MAX) == (180, 300)

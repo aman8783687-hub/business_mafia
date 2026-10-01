@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthesizes RedHat Engineer's narration via edge-tts, one chunk at a
+"""Synthesizes Mafia of Business's Hindi narration via edge-tts, one chunk at a
 time, applying a per-section rate/volume/pitch preset for a story-
 documentary pacing arc. Ported from Dmoo Way's generate_narration_chunks.py
 -- same mechanism, different voice and section names.
@@ -28,7 +28,8 @@ SECTION_PRESETS = {
     name: {"rate": p["rate"], "volume": p["volume"], "pitch": p["pitch"]}
     for name, p in STATE["voice"]["settings"]["section_presets"].items()
 }
-DEFAULT_PRESET = SECTION_PRESETS.get("rising_mystery", {"rate": "+0%", "volume": "+0%", "pitch": "+0Hz"})
+DEFAULT_SECTION = STATE["voice"]["default_section"]
+DEFAULT_PRESET = SECTION_PRESETS.get(DEFAULT_SECTION, {"rate": "+0%", "volume": "+0%", "pitch": "+0Hz"})
 
 _SECTION_RE = re.compile(r"^\[([A-Z_]+)\]\s*$")
 _BEAT_RE = re.compile(r"^(\d+)\.\s+(.*)$")
@@ -40,7 +41,7 @@ def normalize_section(name: str) -> str:
 
 def beat_to_section_map(script_path: Path) -> dict[int, str]:
     mapping: dict[int, str] = {}
-    current_section = "rising_mystery"
+    current_section = DEFAULT_SECTION
     for line in script_path.read_text().splitlines():
         section_match = _SECTION_RE.match(line.strip())
         if section_match:
@@ -86,7 +87,7 @@ async def main() -> None:
         if out_path.exists() and out_path.stat().st_size > 0 and wb_path.exists() and wb_path.stat().st_size > 0:
             continue
         first_beat = chunk["beats"][0]
-        section = section_map.get(first_beat, "rising_mystery")
+        section = section_map.get(first_beat, DEFAULT_SECTION)
         preset = SECTION_PRESETS.get(section, DEFAULT_PRESET)
         try:
             await synth(chunk["text"], preset, out_path, wb_path)

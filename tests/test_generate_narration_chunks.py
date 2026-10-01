@@ -21,3 +21,12 @@ def test_beat_to_section_map(tmp_path):
 
 def test_voice_id_matches_channel_state():
     assert gnc.VOICE == gnc.STATE["voice"]["voice_id"] == "hi-IN-MadhurNeural"
+
+
+def test_hindi_sections_map_and_default_comes_from_config(tmp_path):
+    script = tmp_path / "script.md"
+    script.write_text("1. बिना सेक्शन वाली लाइन।\n[HOOK]\n2. एक कप चाय।\n[RAAZ]\n3. असली खेल।\n")
+    mapping = gnc.beat_to_section_map(script)
+    assert mapping == {1: "khel", 2: "hook", 3: "raaz"}
+    assert gnc.DEFAULT_SECTION == "khel"
+    assert set(gnc.SECTION_PRESETS) == {"hook", "duniya", "khel", "raaz", "sabak"}
