@@ -1,13 +1,17 @@
 name: Business Mafia – Make Video
 
 # One-click video generation. Actions tab → Run workflow → optional topic
-# override → Run. The finished episode uploads to Cloudinary (~24h public
-# link) and the direct-download link lands in the run summary + artifacts.
+# override → Run. Scenes are generated with Perchance (free, no quota, no
+# API key — driven in headless Firefox installed below). The finished
+# episode uploads to Cloudinary (~24h public link) and the direct-download
+# link lands in the run summary + artifacts.
 #
-# Required secrets: MONGODB_URI, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN,
+# Required secrets: MONGODB_URI,
 #   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
 #   plus one LLM key for opencode (ANTHROPIC_API_KEY / OPENAI_API_KEY / …).
-# Optional vars: IMAGE_BACKEND (default perchance), OPENCODE_MODEL, MAX_ATTEMPTS.
+# Optional secrets: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN (thumbnail
+#   scene only — without them the thumbnail falls back to a beat scene).
+# Optional vars: OPENCODE_MODEL, MAX_ATTEMPTS, PERCHANCE_STYLE.
 
 on:
   workflow_dispatch:
@@ -21,11 +25,11 @@ on:
         required: false
         default: ""
       image_backend:
-        description: "Image backend"
+        description: "Scene image backend (perchance = free, no quota)"
         required: false
         default: "perchance"
         type: choice
-        options: [perchance, flux, cloudflare]
+        options: [perchance]
       max_attempts:
         description: "Max opencode attempts"
         required: false
@@ -58,9 +62,11 @@ jobs:
       CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-      IMAGE_BACKEND: ${{ inputs.image_backend }}
+      # Scenes use Perchance (free, no key). Cloudflare creds are optional:
+      # only the thumbnail scene uses FLUX, and it falls back to a beat
+      # scene when they are absent or the daily quota is spent.
+      IMAGE_BACKEND: perchance
       PERCHANCE_STYLE: ${{ vars.PERCHANCE_STYLE }}
-      CLOUDFLARE_IMAGE_MODEL: ${{ vars.CLOUDFLARE_IMAGE_MODEL }}
       OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
       MAX_ATTEMPTS: ${{ inputs.max_attempts }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -77,7 +83,9 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install ffmpeg, fonts, Python deps
+      # Perchance scene generation runs in headless Firefox (Playwright)
+      # — free, no login, no daily quota, ~1 min per scene.
+      - name: Install ffmpeg, fonts, Perchance deps
         run: |
           sudo apt-get update -y
           sudo apt-get install -y ffmpeg fonts-noto-core

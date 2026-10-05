@@ -27,7 +27,8 @@ Scenes take about a minute each on perchance (`make-video` installs Playwright a
 
 Actions tab → **Business Mafia – Make Video** → Run workflow. Optional
 inputs: `topic_override` (exact bank name), `topic_hint` (free text),
-`image_backend`, `max_attempts`. The run executes `run_cycle.sh` on a
+`max_attempts`. Scenes render on **Perchance** (free, no quota, no key —
+headless Firefox is installed by the workflow, ~1 min/scene). The run executes `run_cycle.sh` on a
 runner, then `scripts/upload_cloudinary.py <slug>`:
 
 - video uploads to Cloudinary folder `business-mafia/` (public,
@@ -38,10 +39,11 @@ runner, then `scripts/upload_cloudinary.py <slug>`:
 - `cleanup-cloudinary.yml` runs hourly and deletes uploads older than 24h.
 
 Secrets (repo Settings → Secrets → Actions): `MONGODB_URI`,
-`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
 `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`,
 plus one LLM key for opencode (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / …).
-Vars: `IMAGE_BACKEND`, `OPENCODE_MODEL`, `MAX_ATTEMPTS`.
+Optional: `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` (thumbnail scene
+only — without them the thumbnail falls back to a beat scene).
+Vars: `OPENCODE_MODEL`, `MAX_ATTEMPTS`, `PERCHANCE_STYLE`.
 
 ## Posting
 
