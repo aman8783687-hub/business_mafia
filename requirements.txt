@@ -1,0 +1,9 @@
+# Pinned only by name on purpose: the pipeline targets "latest that works"
+# (edge-tts, pymongo, requests, pillow, playwright). Also gives
+# actions/setup-python's pip cache something to hash (it fails the job
+# when no requirements.txt/pyproject.toml exists).
+edge-tts
+pymongo
+requests
+pillow
+playwright
