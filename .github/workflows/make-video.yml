@@ -7,8 +7,8 @@ name: Business Mafia – Make Video
 # link lands in the run summary + artifacts.
 #
 # Required secrets: MONGODB_URI,
-#   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
-#   plus one LLM key for opencode (ANTHROPIC_API_KEY / OPENAI_API_KEY / …).
+#   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.
+#   No LLM key needed — opencode runs free, no auth.
 # Optional secrets: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN (thumbnail
 #   scene only — without them the thumbnail falls back to a beat scene).
 # Optional vars: OPENCODE_MODEL, MAX_ATTEMPTS, PERCHANCE_STYLE.
@@ -69,10 +69,6 @@ jobs:
       PERCHANCE_STYLE: ${{ vars.PERCHANCE_STYLE }}
       OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
       MAX_ATTEMPTS: ${{ inputs.max_attempts }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       # Headless: opencode must never block on a question/permission prompt.
       OPENCODE_PERMISSION: '{"question":"deny","external_directory":{"**":"allow"}}'
     steps:

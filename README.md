@@ -39,8 +39,8 @@ runner, then `scripts/upload_cloudinary.py <slug>`:
 - `cleanup-cloudinary.yml` runs hourly and deletes uploads older than 24h.
 
 Secrets (repo Settings → Secrets → Actions): `MONGODB_URI`,
-`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`,
-plus one LLM key for opencode (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / …).
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+No LLM key needed — opencode runs free, no auth.
 Optional: `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` (thumbnail scene
 only — without them the thumbnail falls back to a beat scene).
 Vars: `OPENCODE_MODEL`, `MAX_ATTEMPTS`, `PERCHANCE_STYLE`.
