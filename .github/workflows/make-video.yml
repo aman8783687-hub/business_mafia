@@ -56,7 +56,6 @@ jobs:
       download_url: ${{ steps.upload.outputs.download_url }}
     env:
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
-      MONGODB_DB: ${{ vars.MONGODB_DB }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}

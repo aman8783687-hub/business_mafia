@@ -46,7 +46,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 def get_db():
     uri = env_loader.get("MONGODB_URI")
-    db_name = env_loader.get("MONGODB_DB", DEFAULT_DB_NAME)
+    # An unset GitHub Actions variable arrives as an empty string, which
+    # pymongo rejects -- fall back to the default in that case too.
+    db_name = env_loader.get("MONGODB_DB", "") or DEFAULT_DB_NAME
     client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=10000)
     db = client[db_name]
     _seed_topics(db, WORKSPACE)
