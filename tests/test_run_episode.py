@@ -13,14 +13,20 @@ def _episode(tmp_path, metadata, scenes=()):
     return ep
 
 
-def test_thumbnail_args_use_text_accent_output_and_scene(tmp_path):
-    ep = _episode(tmp_path, {"thumbnail_text": "चाय में ₹70?", "thumbnail_accent_word": "₹70?"},
+def test_thumbnail_args_use_text_badge_output_and_scene(tmp_path):
+    ep = _episode(tmp_path, {"thumbnail_text": "चाय वाला | कितना कमाता है?", "thumbnail_badge": "₹7/कप"},
                   scenes=["scene_0001.png"])
     args = run_episode.thumbnail_args(ep)
-    assert args[1] == "चाय में ₹70?"
-    assert args[args.index("--accent-word") + 1] == "₹70?"
+    assert args[1] == "चाय वाला | कितना कमाता है?"
+    assert args[args.index("--badge") + 1] == "₹7/कप"
     assert args[args.index("--out") + 1].endswith("08_publish/thumbnail.png")
     assert args[args.index("--scene") + 1].endswith("05_scenes/scene_0001.png")
+
+
+def test_generated_thumbnail_scene_wins_over_the_beat_scene(tmp_path):
+    ep = _episode(tmp_path, {"thumbnail_text": "X"}, scenes=["scene_0001.png"])
+    (ep / "08_publish" / "thumbnail_scene.png").write_bytes(b"png")
+    assert run_episode.thumbnail_args(ep)[-1].endswith("08_publish/thumbnail_scene.png")
 
 
 def test_thumbnail_beat_selects_the_scene_and_missing_scene_falls_back(tmp_path):

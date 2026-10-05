@@ -14,7 +14,8 @@ calling this:
 
 This script handles everything mechanical after that: narration
 synthesis, stitching, scene generation, ffmpeg assembly, the thumbnail
-(08_publish/thumbnail.png, from metadata.json's thumbnail_text), and
+(08_publish/thumbnail_scene.png from thumbnail_scene, then
+08_publish/thumbnail.png from thumbnail_text), and
 copying the package to output/<slug>/ and recording it in MongoDB (finalize_episode.py), then deleting the episode's intermediates. A stage
 failure aborts the run with a clear message rather than continuing on
 broken input: an audio failure poisons every later stage.
@@ -62,8 +63,17 @@ def run_stage(name: str, args: list[str]) -> None:
         sys.exit(result.returncode)
 
 
+def run_optional_stage(name: str, args: list[str]) -> None:
+    """Like run_stage, but a failure only warns: the thumbnail falls back to a beat scene."""
+    print(f"\n=== {name} ===")
+    result = subprocess.run([sys.executable, *args], cwd=WORKSPACE, env=_subprocess_env())
+    if result.returncode != 0:
+        print(f"[run_episode] '{name}' failed (exit {result.returncode}); continuing with the fallback")
+
+
 def thumbnail_args(episode_dir: Path) -> list[str] | None:
-    """make_thumbnail.py argv for this episode, or None when metadata.json has no thumbnail_text."""
+    """make_thumbnail.py argv for this episode, or None when metadata.json has no thumbnail_text.
+    The art is 08_publish/thumbnail_scene.png when generated, else the thumbnail_beat's scene."""
     try:
         metadata = json.loads((episode_dir / "08_publish" / "metadata.json").read_text())
     except (OSError, ValueError):
@@ -72,14 +82,14 @@ def thumbnail_args(episode_dir: Path) -> list[str] | None:
     if not text:
         return None
     args = [str(SCRIPTS / "make_thumbnail.py"), text, "--out", str(episode_dir / "08_publish" / "thumbnail.png")]
-    if metadata.get("thumbnail_accent_word"):
-        args += ["--accent-word", metadata["thumbnail_accent_word"]]
-    for note in (metadata.get("thumbnail_annotations") or [])[:4]:
-        args += ["--annotation", note]
+    if metadata.get("thumbnail_badge"):
+        args += ["--badge", metadata["thumbnail_badge"]]
     beat = int(metadata.get("thumbnail_beat") or 1)
-    scene = episode_dir / "05_scenes" / f"scene_{beat:04d}.png"
-    if scene.exists():
-        args += ["--scene", str(scene)]
+    for scene in (episode_dir / "08_publish" / "thumbnail_scene.png",
+                  episode_dir / "05_scenes" / f"scene_{beat:04d}.png"):
+        if scene.exists():
+            args += ["--scene", str(scene)]
+            break
     return args
 
 
@@ -148,6 +158,8 @@ def main() -> None:
             if thumb is None:
                 print("[run_episode] ABORTED: metadata.json has no thumbnail_text (the thumbnail is required)")
                 sys.exit(1)
+            run_optional_stage("Thumbnail scene", [str(SCRIPTS / "generate_thumbnail_scene.py"), slug])
+            thumb = thumbnail_args(episode_dir)
             run_stage("Thumbnail", thumb)
         run_stage(name, [str(SCRIPTS / script), slug])
 

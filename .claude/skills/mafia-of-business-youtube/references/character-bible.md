@@ -2,7 +2,7 @@
 
 ## The Boss (host)
 
-- Reference: `brand/host/host-reference-clean.jpeg` (approved 2026-10-01), sent with every scene by `scenes/flux_orchestrator.py`.
+- Reference: `brand/host/host-reference-clean.jpeg` (approved 2026-10-01), sent with every FLUX request (thumbnail scene, flux rerolls). The default perchance backend cannot take it: the style text is the only lock, so check every scene against it.
 - Look: thin black stick body and limbs, round white head, two black dot eyes, **no mouth**, black fedora with a gold band, thin black suit-jacket outline, small solid gold tie.
 - Personality (shown through poses, not faces): calm, knowing, slightly amused -- the insider who explains the game. Leans on counters, points at props, counts coins, tips the hat.
 - Never: a mouth, a red hat, coloured clothes beyond the gold tie and band, guns or crime props.

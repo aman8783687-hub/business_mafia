@@ -1,7 +1,9 @@
 {
   "channel": {
-    "name": "Mafia of Business",
-    "handles": {"note": "Posting is done by hand by the operator from MafiaOfBusiness/output/<slug>/."},
+    "name": "Business Mafia",
+    "handles": {
+      "note": "Posting is done by hand by the operator from MafiaOfBusiness/output/<slug>/."
+    },
     "autonomy": {
       "publish_without_approval": true,
       "authorized_by": "operator, 2026-10-01, explicit instruction to build this pipeline",
@@ -11,7 +13,7 @@
     "timezone": "Asia/Kolkata",
     "publish_cadence": "1 video per ./make-video run",
     "language": "hi",
-    "topic": "How everyday Indian businesses and people actually make money (chai tapri, dhaba, gym, tuition centre, wedding planner, politician...), told as a Hindi story, never as a math lecture."
+    "topic": "How everyday Indian businesses make money and how the viewer could start one: '<X> \u0935\u093e\u0932\u093e \u0915\u093f\u0924\u0928\u093e \u0915\u092e\u093e\u0924\u093e \u0939\u0948' deep dives and '\u20b9X \u0938\u0947 \u0936\u0941\u0930\u0942 \u0915\u0930\u0947\u0902 \u092f\u0947 N \u092c\u093f\u091c\u093c\u0928\u0947\u0938' listicles, told as a Hindi story, never as a math lecture."
   },
   "voice": {
     "provider": "edge-tts",
@@ -22,11 +24,36 @@
     "settings": {
       "audio_profile": "Confident adult male Hindi narrator, an insider telling you how the game really works. Emotion via per-section rate/volume/pitch (custom SSML is blocked server-side).",
       "section_presets": {
-        "hook":   {"rate": "-6%", "volume": "+0%", "pitch": "-2Hz", "note": "The rupee shock or question. Slow, weighty."},
-        "duniya": {"rate": "+0%", "volume": "+0%", "pitch": "+0Hz", "note": "The world: who this person is, what everyone thinks they earn."},
-        "khel":   {"rate": "+6%", "volume": "+5%", "pitch": "+1Hz", "note": "The money game, stream by stream. Energetic."},
-        "raaz":   {"rate": "-5%", "volume": "+0%", "pitch": "-1Hz", "note": "The secret trick. Slower, conspiratorial."},
-        "sabak":  {"rate": "-8%", "volume": "-2%", "pitch": "-2Hz", "note": "Takeaway, comment question, next episode. Calm."}
+        "hook": {
+          "rate": "-6%",
+          "volume": "+0%",
+          "pitch": "-2Hz",
+          "note": "The rupee shock or question. Slow, weighty."
+        },
+        "duniya": {
+          "rate": "+0%",
+          "volume": "+0%",
+          "pitch": "+0Hz",
+          "note": "The world: who this person is, what everyone thinks they earn."
+        },
+        "khel": {
+          "rate": "+6%",
+          "volume": "+5%",
+          "pitch": "+1Hz",
+          "note": "The money game: where it comes from, each cost with the owner's fix. Energetic."
+        },
+        "raaz": {
+          "rate": "-5%",
+          "volume": "+0%",
+          "pitch": "-1Hz",
+          "note": "The owner's smart move. Slower, admiring."
+        },
+        "sabak": {
+          "rate": "-8%",
+          "volume": "-2%",
+          "pitch": "-2Hz",
+          "note": "Rules for doing it well, a line of respect, comment question, next episode. Warm and calm."
+        }
       }
     },
     "seed": null,
@@ -69,37 +96,100 @@
     "max_keyword_cues": 10,
     "reveal_section": "raaz",
     "keywords": {
-      "coin_clink": ["पैस*", "रुपय*", "रुपए", "कमाई", "कमात*", "मुनाफ़*", "मुनाफा", "प्रॉफ़िट", "प्रॉफिट", "सिक्क*"],
-      "cash_register": ["बिल", "बिक्री", "बेच*", "ग्राहक*", "कस्टमर*"],
-      "sizzle": ["चाय", "तंदूर", "खाना", "तेल", "कड़ाही", "आग"],
-      "crowd_murmur": ["भीड़", "बाज़ार", "बाजार", "मंडी", "मेला"],
-      "paper_rustle": ["हिसाब", "नोट*", "कागज़*", "कागज*", "किताब*"]
+      "coin_clink": [
+        "\u092a\u0948\u0938*",
+        "\u0930\u0941\u092a\u092f*",
+        "\u0930\u0941\u092a\u090f",
+        "\u0915\u092e\u093e\u0908",
+        "\u0915\u092e\u093e\u0924*",
+        "\u092e\u0941\u0928\u093e\u092b\u093c*",
+        "\u092e\u0941\u0928\u093e\u092b\u093e",
+        "\u092a\u094d\u0930\u0949\u092b\u093c\u093f\u091f",
+        "\u092a\u094d\u0930\u0949\u092b\u093f\u091f",
+        "\u0938\u093f\u0915\u094d\u0915*"
+      ],
+      "cash_register": [
+        "\u092c\u093f\u0932",
+        "\u092c\u093f\u0915\u094d\u0930\u0940",
+        "\u092c\u0947\u091a*",
+        "\u0917\u094d\u0930\u093e\u0939\u0915*",
+        "\u0915\u0938\u094d\u091f\u092e\u0930*"
+      ],
+      "sizzle": [
+        "\u091a\u093e\u092f",
+        "\u0924\u0902\u0926\u0942\u0930",
+        "\u0916\u093e\u0928\u093e",
+        "\u0924\u0947\u0932",
+        "\u0915\u0921\u093c\u093e\u0939\u0940",
+        "\u0906\u0917"
+      ],
+      "crowd_murmur": [
+        "\u092d\u0940\u0921\u093c",
+        "\u092c\u093e\u091c\u093c\u093e\u0930",
+        "\u092c\u093e\u091c\u093e\u0930",
+        "\u092e\u0902\u0921\u0940",
+        "\u092e\u0947\u0932\u093e"
+      ],
+      "paper_rustle": [
+        "\u0939\u093f\u0938\u093e\u092c",
+        "\u0928\u094b\u091f*",
+        "\u0915\u093e\u0917\u091c\u093c*",
+        "\u0915\u093e\u0917\u091c*",
+        "\u0915\u093f\u0924\u093e\u092c*"
+      ]
     },
-    "disable": ["wind", "creak", "heartbeat", "footsteps", "whisper", "temple_bell", "drum", "distant_thunder", "silence_sting"],
+    "disable": [
+      "wind",
+      "creak",
+      "heartbeat",
+      "footsteps",
+      "whisper",
+      "temple_bell",
+      "drum",
+      "distant_thunder",
+      "silence_sting"
+    ],
     "note": "No music. Soft whoosh on every scene cut, a reveal sting on the first [RAAZ] beat, sparse money/food/market keyword cues (Devanagari stems, * = prefix).",
     "transitions": {
       "enabled": true,
-      "variants": ["whoosh_soft_1", "whoosh_soft_2", "whoosh_soft_3"],
+      "variants": [
+        "whoosh_soft_1",
+        "whoosh_soft_2",
+        "whoosh_soft_3"
+      ],
       "gain_jitter_db": 2.0,
-      "skip_sections": ["raaz"],
+      "skip_sections": [
+        "raaz"
+      ],
       "note": "Skipped on raaz beats, which get reveal_sting on the first one."
     }
   },
   "format": {
-    "target_runtime_seconds": 240,
-    "runtime_min_seconds": 180,
-    "runtime_max_seconds": 300,
-    "runtime_note": "Hard cap 300 s: stitch_audio.py and finalize_episode.py fail outside 180-300 s. Fix by trimming the script, never by speeding the voice.",
-    "sections": ["hook", "duniya", "khel", "raaz", "sabak"],
+    "target_runtime_seconds": 600,
+    "runtime_min_seconds": 480,
+    "runtime_max_seconds": 720,
+    "runtime_note": "8-12 minutes (2026-10-04, after the Growth Mitra analysis: their 2.5-9 min videos got 100-700 views, every hit is 16-27 min). stitch_audio.py and finalize_episode.py fail outside 480-720 s; check_script.py fails a script outside ~1,100-1,700 words. Fix by editing the script, never by changing the voice speed.",
+    "sections": [
+      "hook",
+      "duniya",
+      "khel",
+      "raaz",
+      "sabak"
+    ],
     "words_per_minute": 140,
-    "words_per_minute_note": "Measured 2026-10-01: hi-IN-MadhurNeural at default rate speaks ~140 Hindi words/min. Budget ~480-600 words for 240 s.",
-    "scene_seconds_min": 5,
-    "scene_seconds_max": 7,
+    "words_per_minute_note": "Measured 2026-10-01: hi-IN-MadhurNeural at default rate speaks ~140 Hindi words/min. Budget ~1,250-1,500 words for 600 s.",
+    "scene_seconds_min": 7,
+    "scene_seconds_max": 10,
     "fps": 30,
     "zoom_delta": 0.05,
     "animation_stage": "enabled",
     "animation_stage_note": "Ken Burns push in/out per scene via ffmpeg zoompan; direction from shotlist 'motion', else alternating.",
-    "no_intro_outro": "No intro sting or outro card. The hook beat is the first scene."
+    "no_intro_outro": "No intro sting or outro card. The hook beat is the first scene.",
+    "episode_formats": {
+      "kamai": "Deep dive: '<X> \u0935\u093e\u0932\u093e \u0915\u093f\u0924\u0928\u093e \u0915\u092e\u093e\u0924\u093e \u0939\u0948?' -- one business, one character (\u0930\u092e\u0947\u0936), the full hisaab, and a '\u0906\u092a \u0936\u0941\u0930\u0942 \u0915\u0930\u0928\u093e \u091a\u093e\u0939\u0947\u0902 \u0924\u094b' block in [SABAK].",
+      "list": "Listicle: '\u20b9<X> \u0938\u0947 \u0936\u0941\u0930\u0942 \u0915\u0930\u0947\u0902 \u092f\u0947 <N> \u092c\u093f\u091c\u093c\u0928\u0947\u0938' -- five to seven businesses the viewer can start with that budget, each with what the money buys, a realistic monthly range and one beginner mistake with its fix.",
+      "rule": "Alternate the two formats; topic.json carries format: kamai | list (script-formula.md, topic-strategy.md)."
+    }
   },
   "captions": {
     "enabled": true,
@@ -131,12 +221,62 @@
   },
   "thumbnail": {
     "font_path": "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
-    "accent_rgb": [212, 160, 23],
-    "frame_rgb": [212, 160, 23],
-    "text_rgb": [255, 255, 255],
-    "outline_rgb": [17, 17, 17]
+    "accent_rgb": [
+      212,
+      160,
+      23
+    ],
+    "frame_rgb": [
+      212,
+      160,
+      23
+    ],
+    "text_rgb": [
+      255,
+      255,
+      255
+    ],
+    "outline_rgb": [
+      17,
+      17,
+      17
+    ],
+    "band_rgb": [
+      255,
+      196,
+      0
+    ],
+    "note": "Two-band title (white on black, black on yellow) on the left with rupee figures and digits highlighted (yellow on black, green on yellow), the thumbnail scene on the right, a green growth arrow top right, an optional green rupee badge. Brighter after the Growth Mitra analysis (2026-10-04); the in-video palette stays black/white/gold.",
+    "number_on_ink_rgb": [
+      255,
+      196,
+      0
+    ],
+    "number_on_band_rgb": [
+      11,
+      122,
+      43
+    ],
+    "badge_rgb": [
+      22,
+      163,
+      74
+    ],
+    "badge_text_rgb": [
+      255,
+      255,
+      255
+    ],
+    "arrow_rgb": [
+      22,
+      163,
+      74
+    ]
   },
-  "counters": {"episodes_published": 0, "buffer_ready": 0},
+  "counters": {
+    "episodes_published": 0,
+    "buffer_ready": 0
+  },
   "active_experiment": null,
   "baselines": {
     "ctr_30d": null,

@@ -22,10 +22,12 @@ if [ ! -x .venv/bin/python3 ]; then
   echo "first run: creating .venv..."
   python3 -m venv .venv
 fi
-if ! .venv/bin/python3 -c "import edge_tts, pymongo, requests, PIL" 2>/dev/null; then
-  echo "installing edge-tts, pymongo, requests, pillow..."
-  .venv/bin/pip install -q edge-tts pymongo requests pillow
+if ! .venv/bin/python3 -c "import edge_tts, pymongo, requests, PIL, playwright" 2>/dev/null; then
+  echo "installing edge-tts, pymongo, requests, pillow, playwright..."
+  .venv/bin/pip install -q edge-tts pymongo requests pillow playwright
 fi
+# Scenes come from perchance.org in headless Firefox (scripts/scenes/perchance_orchestrator.py).
+.venv/bin/python3 -m playwright install firefox >/dev/null
 export PATH="$ROOT/.venv/bin:$HOME/.opencode/bin:$PATH"
 
 for tool in ffmpeg ffprobe opencode; do

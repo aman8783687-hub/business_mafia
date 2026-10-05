@@ -122,8 +122,12 @@ def finalize(episode_dir: Path, output_root: Path = OUTPUT_ROOT, record=None, pr
         shutil.copy2(src, out_dir / src.name)
     (out_dir / "posting.md").write_text(build_posting_md(metadata, info["duration"]))
 
+    # format and category let the next run alternate formats and verticals (state_db.py recent).
+    topic_path = episode_dir / "topic.json"
+    topic = json.loads(topic_path.read_text()) if topic_path.exists() else {}
     now = datetime.now(timezone.utc).isoformat()
     record(slug, {"title": metadata["title"], "duration": round(info["duration"], 1),
+                  "format": topic.get("format", "kamai"), "category": topic.get("category", ""),
                   "output_dir": str(out_dir), "status": "ready", "finalized_at": now})
     log = {"status": "ok", "output_dir": str(out_dir), "duration": round(info["duration"], 1), "at": now}
     log_path.write_text(json.dumps(log, indent=2))

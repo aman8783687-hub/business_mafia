@@ -94,11 +94,31 @@ def test_chunk_plan_must_cover_every_beat_exactly_once():
 
 
 def test_metadata_must_make_a_buildable_thumbnail_before_anything_is_spent():
-    ok = {"title": "पेट्रोल पंप", "thumbnail_text": "पंप का हिसाब",
-          "thumbnail_annotations": ["₹4.5/लीटर", "लोन ईएमआई"]}
+    ok = {"title": "पेट्रोल पंप", "thumbnail_text": "पेट्रोल पंप वाला | कितना कमाता है?",
+          "thumbnail_badge": "₹4.5/लीटर", "thumbnail_scene": "a petrol pump"}
     assert check_script.check_metadata(ok) == []
     assert any("thumbnail_text" in p for p in check_script.check_metadata({"title": "x"}))
     assert any("at most 4 words" in p for p in check_script.check_metadata({**ok, "thumbnail_text": "एक दो तीन चार पाँच"}))
-    bad = check_script.check_metadata({**ok, "thumbnail_annotations": ["लोन EMI", "a", "b", "c", "d"]})
+    assert any("1-2 lines" in p for p in check_script.check_metadata({**ok, "thumbnail_text": "एक | दो | तीन"}))
+    assert any("thumbnail_scene" in p for p in check_script.check_metadata({**ok, "thumbnail_scene": ""}))
+    bad = check_script.check_metadata({**ok, "thumbnail_badge": "लोन EMI"})
     assert any("Latin" in p and "EMI" in p for p in bad)
-    assert any("at most 4 annotations" in p for p in bad)
+
+def test_word_budget_follows_the_runtime_window():
+    fmt = {"words_per_minute": 140, "runtime_min_seconds": 480, "runtime_max_seconds": 720}
+    assert check_script.word_budget(fmt) == (1064, 1764)
+    beat = "1. " + " ".join(["शब्द"] * 10)
+    assert check_script.check_word_count("\n".join([beat] * 140), (1064, 1764)) == []
+    assert "at least 1064" in check_script.check_word_count("\n".join([beat] * 50), (1064, 1764))[0]
+    assert "at most 1764" in check_script.check_word_count("\n".join([beat] * 200), (1064, 1764))[0]
+
+
+def test_state_word_budget_is_the_8_to_12_minute_format():
+    from state import load_state
+    assert check_script.word_budget(load_state()["format"]) == (1064, 1764)
+
+
+def test_topic_format_must_be_kamai_or_list():
+    assert check_script.check_topic({"format": "list"}, ["kamai", "list"]) == []
+    assert check_script.check_topic({}, ["kamai", "list"]) == []  # older episodes are deep dives
+    assert "use one of" in check_script.check_topic({"format": "short"}, ["kamai", "list"])[0]

@@ -1,0 +1,46 @@
+name: Cleanup Cloudinary (24h expiry)
+
+# Deletes public Business Mafia uploads older than 24h so every
+# make-video link is effectively a 24-hour download link.
+# Runs hourly; can also be triggered by hand.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      max_age_hours:
+        description: "Delete uploads older than this (hours)"
+        required: false
+        default: "24"
+      dry_run:
+        description: "List only, delete nothing"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install requests
+      - name: Delete uploads older than 24h
+        working-directory: MafiaOfBusiness
+        run: |
+          ARGS="cleanup --max-age-hours ${{ inputs.max_age_hours || '24' }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          python3 scripts/upload_cloudinary.py $ARGS

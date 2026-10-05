@@ -10,6 +10,12 @@
 - Only legal, documented income: salary, allowances, pension, assets declared in public election affidavits, aggregate reports (e.g. ADR analyses).
 - No named living person is accused of anything. Corruption appears only as reported, sourced, aggregate facts, called "आरोप" when it is an allegation.
 
+## Positive, not promotional
+
+- The channel shows the good side of business (`script-formula.md`, "Tone"), but never by hiding a cost or promising easy money. Every cost the business really has is said once, with how owners handle it.
+- No "guaranteed income", no "हर कोई लाखों कमाता है". Earnings are a range, and the video says what a slow month looks like.
+- `list` episodes: every idea's monthly figure is an estimate with a range and its assumption ("दस ग्राहक हों तो"), the [HOOK] says once that it is not a get-rich video, and no idea needs a licence the video does not mention (food: FSSAI registration; transport: permits). No MLM, trading, betting, crypto or "app से कमाई" ideas.
+
 ## Hypothetical characters
 
 - रमेश, राजू, शर्मा जी are examples. Introduce them with "मान लीजिए" and never present them as real people or real interviews.

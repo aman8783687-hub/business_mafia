@@ -31,6 +31,13 @@ PY
 before="$(finalized_count)"
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   prompt="$(cat cycle_prompt.md)"
+  # GitHub Actions manual trigger: workflow_dispatch inputs arrive here
+  # (CYCLE_EXTRA_PROMPT). Empty locally, so local ./make-video is unchanged.
+  if [ -n "${CYCLE_EXTRA_PROMPT:-}" ]; then
+    prompt="$prompt
+
+$CYCLE_EXTRA_PROMPT"
+  fi
   if [ "$attempt" -gt 1 ]; then
     prompt="$prompt
 

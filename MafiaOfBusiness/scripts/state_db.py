@@ -247,7 +247,8 @@ def main(argv: list[str] | None = None) -> int:
     elif cmd == "recent":
         n = int(rest[0]) if rest else 10
         for ep in recent(db, n):
-            print(f"{ep['slug']}\t{ep['status']}\t{ep.get('youtube_url') or ep.get('output_dir') or ''}")
+            print(f"{ep['slug']}\t{ep['status']}\t{ep.get('format', 'kamai')}\t{ep.get('category', '')}\t"
+                  f"{ep.get('youtube_url') or ep.get('output_dir') or ''}")
     elif cmd == "topics":
         status = rest[0] if rest else "queued"
         for t in topics(db, status):

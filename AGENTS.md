@@ -1,9 +1,9 @@
-# Mafia of Business channel -- start here
+# Business Mafia channel -- start here
 
-This directory is the production system for the Hindi YouTube channel **Mafia of Business**: 3-5 minute, 16:9 stickman story videos about how everyday Indian businesses and people actually make money. Local only: each run finalizes one video into `MafiaOfBusiness/output/<slug>/`; the operator posts it by hand. If you are an agent picking up work here, read in this order:
+This directory is the production system for the Hindi YouTube channel **Business Mafia** (the repo and folders keep the old name, Mafia of Business): 8-12 minute, 16:9 stickman story videos about how everyday Indian businesses make money and how the viewer could start one. Local only: each run finalizes one video into `MafiaOfBusiness/output/<slug>/`; the operator posts it by hand. If you are an agent picking up work here, read in this order:
 
 1. `.claude/skills/mafia-of-business-youtube/SKILL.md` -- the operating manual; its `references/` has one file per stage.
-2. `MafiaOfBusiness/channel_state.json` -- locked config: voice `hi-IN-MadhurNeural`, boss-stickman style lock, 180-300 s format, gold captions.
+2. `MafiaOfBusiness/channel_state.json` -- locked config: voice `hi-IN-MadhurNeural`, boss-stickman style lock, 480-720 s format, `kamai`/`list` episode formats, gold captions.
 3. The MongoDB topic bank: `python3 scripts/state_db.py topics`.
 4. `MafiaOfBusiness/reports/changelog.md`.
 

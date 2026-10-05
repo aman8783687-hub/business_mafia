@@ -24,19 +24,20 @@ def _episode(tmp_path, slug="2026-10-02-chai-wala"):
     (ep / "07_edit" / "captions.srt").write_text("1\n00:00:00,000 --> 00:00:01,000\nएक\n")
     (ep / "08_publish" / "thumbnail.png").write_bytes(b"png")
     (ep / "08_publish" / "metadata.json").write_text(json.dumps(META, ensure_ascii=False))
+    (ep / "topic.json").write_text(json.dumps({"format": "list", "category": "Khana & Street Food"}))
     return ep
 
 
-GOOD_INFO = {"width": 1920, "height": 1080, "duration": 241.2, "has_audio": True}
+GOOD_INFO = {"width": 1920, "height": 1080, "duration": 601.2, "has_audio": True}
 
 
 def test_verify_video_accepts_good_and_names_each_problem():
-    assert fe.verify_video(GOOD_INFO, 180, 300) == []
-    bad = {"width": 1280, "height": 720, "duration": 301.0, "has_audio": False}
-    problems = fe.verify_video(bad, 180, 300)
+    assert fe.verify_video(GOOD_INFO, 480, 720) == []
+    bad = {"width": 1280, "height": 720, "duration": 721.0, "has_audio": False}
+    problems = fe.verify_video(bad, 480, 720)
     assert len(problems) == 3
     assert any("1280x720" in p for p in problems)
-    assert any("301.0" in p for p in problems)
+    assert any("721.0" in p for p in problems)
     assert any("audio" in p for p in problems)
 
 
@@ -58,16 +59,17 @@ def test_finalize_copies_package_records_and_logs(tmp_path):
     assert sorted(p.name for p in out.iterdir()) == sorted([
         f"mafia-of-business-{ep.name}.mp4", "thumbnail.png", "captions.srt", "metadata.json", "posting.md"])
     assert records[0][0] == ep.name and records[0][1]["status"] == "ready"
-    assert records[0][1]["duration"] == 241.2
+    assert records[0][1]["duration"] == 601.2
+    assert (records[0][1]["format"], records[0][1]["category"]) == ("list", "Khana & Street Food")
     log = json.loads((ep / "08_publish" / "finalize_log.json").read_text())
     assert log["status"] == "ok" and log["output_dir"] == str(out)
 
 
 def test_finalize_refuses_bad_video_and_writes_nothing(tmp_path):
     ep = _episode(tmp_path)
-    with pytest.raises(RuntimeError, match="301.0"):
+    with pytest.raises(RuntimeError, match="721.0"):
         fe.finalize(ep, tmp_path / "output", record=lambda *a: None,
-                    probe=lambda p: {**GOOD_INFO, "duration": 301.0})
+                    probe=lambda p: {**GOOD_INFO, "duration": 721.0})
     assert not (tmp_path / "output").exists()
     assert not (ep / "08_publish" / "finalize_log.json").exists()
 

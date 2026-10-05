@@ -57,4 +57,4 @@ def test_check_runtime_boundaries():
 
 
 def test_runtime_limits_come_from_channel_state():
-    assert (stitch_audio.RUNTIME_MIN, stitch_audio.RUNTIME_MAX) == (180, 300)
+    assert (stitch_audio.RUNTIME_MIN, stitch_audio.RUNTIME_MAX) == (480, 720)

@@ -7,7 +7,10 @@ Fails an episode's 02_script/script.md when:
     so numbers are written as words: "दस हज़ार", not "10,000");
   - a beat has more than two Latin-script words (an English sentence slipped
     in; one or two English business words like "profit" are fine);
-  - the whole script is under 90% Devanagari letters.
+  - the whole script is under 90% Devanagari letters;
+  - the word count cannot fit the runtime window (480-720 s at ~140 words/min,
+    with 5% slack: stitch_audio.py has the final say on the real duration);
+  - topic.json names a format other than "kamai" or "list".
 
 Usage: python3 scripts/check_script.py <episode-slug>
 """
@@ -25,6 +28,7 @@ from state import load_state  # noqa: E402
 WORKSPACE = SCRIPTS_DIR.parent
 MIN_DEVANAGARI_RATIO = 0.9
 MAX_LATIN_WORDS_PER_BEAT = 2
+WORD_BUDGET_SLACK = 0.05
 
 _TAG_RE = re.compile(r"^\[([A-Z_]+)\]\s*$")
 _BEAT_RE = re.compile(r"^(\d+)\.\s*(.+)$")  # same shape as stitch_audio.parse_script
@@ -37,6 +41,31 @@ def _devanagari_ratio(text: str) -> float:
     if not letters:
         return 1.0
     return sum("ऀ" <= c <= "ॿ" for c in letters) / len(letters)
+
+
+def word_budget(fmt: dict) -> tuple[int, int]:
+    """(min, max) narration words that can land inside the runtime window."""
+    per_second = fmt["words_per_minute"] / 60
+    return (int(fmt["runtime_min_seconds"] * per_second * (1 - WORD_BUDGET_SLACK)),
+            int(fmt["runtime_max_seconds"] * per_second * (1 + WORD_BUDGET_SLACK)))
+
+
+def check_word_count(script_text: str, budget: tuple[int, int]) -> list[str]:
+    words = sum(len(m.group(2).split()) for m in
+                (_BEAT_RE.match(line.strip()) for line in script_text.splitlines()) if m)
+    lo, hi = budget
+    if words < lo:
+        return [f"script has {words} words; the 8-12 minute format needs at least {lo} (aim for ~1,400)"]
+    if words > hi:
+        return [f"script has {words} words; at most {hi} fit in the runtime cap (aim for ~1,400)"]
+    return []
+
+
+def check_topic(topic: dict, formats: list[str]) -> list[str]:
+    fmt = topic.get("format", "kamai")
+    if fmt not in formats:
+        return [f"topic.json format is {fmt!r}; use one of {formats}"]
+    return []
 
 
 def check(script_text: str, sections: list[str]) -> list[str]:
@@ -112,12 +141,19 @@ def check_metadata(metadata: dict) -> list[str]:
     text = metadata.get("thumbnail_text")
     if not text:
         problems.append("metadata.json has no thumbnail_text (the thumbnail is part of the package)")
-    elif len(text.split()) > 4:
-        problems.append(f"thumbnail_text has {len(text.split())} words; at most 4 words: {text}")
-    notes = metadata.get("thumbnail_annotations") or []
-    if len(notes) > 4:
-        problems.append(f"{len(notes)} thumbnail_annotations; at most 4 annotations")
-    latin = [t for t in [text or "", *notes] if re.search(r"[A-Za-z]", t)]
+    else:
+        lines = [line.split() for line in text.split("|") if line.strip()]
+        if not 1 <= len(lines) <= 2:
+            problems.append(f"thumbnail_text needs 1-2 lines separated by '|': {text}")
+        for words in lines:
+            if len(words) > 4:
+                problems.append(f"thumbnail_text line has {len(words)} words; at most 4 words per line: {' '.join(words)}")
+    if not metadata.get("thumbnail_scene"):
+        problems.append("metadata.json has no thumbnail_scene (the FLUX description of the thumbnail art)")
+    badge = metadata.get("thumbnail_badge") or ""
+    if len(badge) > 18:
+        problems.append(f"thumbnail_badge is {len(badge)} characters; at most 18: {badge}")
+    latin = [t for t in [text or "", badge] if re.search(r"[A-Za-z]", t)]
     if latin:
         problems.append(f"Latin letters in thumbnail text (the Devanagari font has none, e.g. EMI -> ईएमआई): {latin}")
     return problems
@@ -129,7 +165,13 @@ def main() -> int:
         return 1
     episode = WORKSPACE / "episodes" / sys.argv[1]
     script_text = (episode / "02_script" / "script.md").read_text()
-    problems = check(script_text, load_state()["format"]["sections"])
+    fmt = load_state()["format"]
+    problems = check(script_text, fmt["sections"])
+    problems += check_word_count(script_text, word_budget(fmt))
+    topic_path = episode / "topic.json"
+    if topic_path.exists():
+        formats = [k for k in fmt["episode_formats"] if k != "rule"]
+        problems += check_topic(json.loads(topic_path.read_text()), formats)
     plan_path = episode / "03_audio" / "chunk_plan.json"
     if plan_path.exists():
         problems += check_chunk_plan(script_text, json.loads(plan_path.read_text()))

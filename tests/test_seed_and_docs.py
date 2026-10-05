@@ -28,11 +28,11 @@ def test_docs_reference_current_pipeline_only():
                   "COLD_OPEN", "RISING_MYSTERY", "CLIMAX_REVEAL", "en-US-Ava", "slot-check"):
         assert stale not in blob, stale
     for needed in ("[HOOK]", "[RAAZ]", "finalize_log.json", "output/", "hi-IN-MadhurNeural", "check_script.py",
-                   "thumbnail_annotations", "आपके सवाल", "playlist", "मान लीजिए"):
+                   "thumbnail_scene", "आपके सवाल", "playlist", "मान लीजिए"):
         assert needed in blob, needed
 
 
 def test_skill_frontmatter_names_the_channel():
     head = (SKILL / "SKILL.md").read_text().split("---")[1]
     assert re.search(r"^name: mafia-of-business-youtube$", head, re.M)
-    assert "Mafia of Business" in head
+    assert "Business Mafia" in head

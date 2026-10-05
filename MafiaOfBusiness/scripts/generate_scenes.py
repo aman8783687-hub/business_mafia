@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Generate scene images for an episode. The image backend is picked by
-the IMAGE_BACKEND setting: "flux" (default: FLUX.2 klein on Cloudflare,
-conditioned on the host reference image, scenes/flux_orchestrator.py),
-or "cloudflare" (SDXL, scenes/cloudflare_orchestrator.py). Only "flux"
-keeps the boss stickman on-model; "cloudflare" is a text-prompt-only fallback.
+the IMAGE_BACKEND setting: "perchance" (default: perchance.org's free
+generator driven in headless Firefox, no daily quota, about one image a
+minute, scenes/perchance_orchestrator.py), "flux" (FLUX.2 klein on
+Cloudflare, conditioned on the host reference image, but the free 10,000
+neurons/day cover only a handful of images, scenes/flux_orchestrator.py),
+or "cloudflare" (SDXL, scenes/cloudflare_orchestrator.py, same quota).
+perchance and cloudflare are text-prompt only: look at every scene.
 
 For every beat in 03_audio/timings.json (skipping "real_photo" beats,
 which stay hand-placed in 05_scenes/):
@@ -23,7 +26,8 @@ Options:
                        --seed.
     --seed N           Force this seed for the single beat selected by
                        --beats (requires exactly one beat). Both
-                       backends honour seeds.
+                       flux and cloudflare honour seeds; perchance has
+                       none, so any rerun of a beat is a new image.
     --dry-run          Write/update prompt_plan.json and print the plan,
                        but never call the image backend.
 """
@@ -44,7 +48,7 @@ WORKSPACE = SCRIPTS_DIR.parent
 import env_loader
 from scenes.prompt_builder import build_prompt_plan
 
-DEFAULT_IMAGE_BACKEND = "flux"
+DEFAULT_IMAGE_BACKEND = "perchance"
 
 
 def generate_episode_scenes(slug, plan_path, out_dir, beat_numbers):
@@ -52,12 +56,14 @@ def generate_episode_scenes(slug, plan_path, out_dir, beat_numbers):
     lazily so a run never needs the other backend's credentials."""
     # An unset GitHub Actions variable arrives as an empty string.
     backend = (env_loader.get("IMAGE_BACKEND", "") or DEFAULT_IMAGE_BACKEND).lower()
-    if backend == "flux":
+    if backend == "perchance":
+        from scenes import perchance_orchestrator as orchestrator
+    elif backend == "flux":
         from scenes import flux_orchestrator as orchestrator
     elif backend == "cloudflare":
         from scenes import cloudflare_orchestrator as orchestrator
     else:
-        raise SystemExit(f"Unknown IMAGE_BACKEND {backend!r} (use 'flux' or 'cloudflare')")
+        raise SystemExit(f"Unknown IMAGE_BACKEND {backend!r} (use 'perchance', 'flux' or 'cloudflare')")
     print(f"Image backend: {backend}")
     return orchestrator.generate_episode_scenes(slug, plan_path, out_dir, beat_numbers)
 

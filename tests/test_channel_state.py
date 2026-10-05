@@ -6,7 +6,7 @@ S = state.load_state()
 
 
 def test_channel_identity_and_language():
-    assert S["channel"]["name"] == "Mafia of Business"
+    assert S["channel"]["name"] == "Business Mafia"
     assert S["channel"]["language"] == "hi"
 
 
@@ -19,8 +19,8 @@ def test_hindi_voice_and_sections():
 
 def test_runtime_window_is_three_to_five_minutes():
     f = S["format"]
-    assert (f["runtime_min_seconds"], f["target_runtime_seconds"], f["runtime_max_seconds"]) == (180, 240, 300)
-    assert (f["scene_seconds_min"], f["scene_seconds_max"]) == (5, 7)
+    assert (f["runtime_min_seconds"], f["target_runtime_seconds"], f["runtime_max_seconds"]) == (480, 600, 720)
+    assert (f["scene_seconds_min"], f["scene_seconds_max"]) == (7, 10)
 
 
 def test_gold_devanagari_captions():

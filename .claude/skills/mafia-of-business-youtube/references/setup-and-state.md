@@ -9,7 +9,7 @@ Locked config, loaded by every script through `scripts/state.py`'s `load_state()
 - `voice`: edge-tts voice id (`hi-IN-MadhurNeural`), the per-section rate/volume/pitch presets (`hook`, `duniya`, `khel`, `raaz`, `sabak`), `default_section`, chunk limits.
 - `style_lock`: the image prompt suffix (boss stickman, black/white/gold), aspect `16:9`, resolution `1920x1080`.
 - `audio`: loudness target (-14 LUFS), true peak, silence trimming, gaps.
-- `format`: `runtime_min_seconds` 180, `target_runtime_seconds` 240, `runtime_max_seconds` 300, `sections`, scene length 5-7 s, fps, zoom.
+- `format`: `runtime_min_seconds` 480, `target_runtime_seconds` 600, `runtime_max_seconds` 720, `sections`, `episode_formats` (`kamai`, `list`), scene length 7-10 s, fps, zoom.
 - `ambience`, `captions`, `thumbnail`: effect keywords, caption style, thumbnail colours and font.
 - `counters`: `episodes_published`.
 
@@ -35,7 +35,7 @@ Collections: `topics`, `episodes` (script, shotlist, chunk plan, metadata, `01_r
 
 At the start of a run `pull` restores the text files of unfinished episodes and takes only the live keys (`counters`, `baselines`, `active_experiment`) from MongoDB; all other config comes from git, so a config change ships with the commit and a stale database copy can never undo it. An empty database is seeded once from `seed/topic_bank.seed.json`. At the end `push` saves counters and episode text; a posted episode is never downgraded. Only text is stored: audio, images and video never go to the database.
 
-Environment (`.env` in the repo root, gitignored): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (optional `CLOUDFLARE_IMAGE_MODEL`), `MONGODB_URI`; optional `IMAGE_BACKEND` (`flux` default), `MONGODB_DB`. Nothing is committed to git by the pipeline.
+Environment (`.env` in the repo root, gitignored): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (optional `CLOUDFLARE_IMAGE_MODEL`), `MONGODB_URI`; optional `IMAGE_BACKEND` (`perchance` default, `flux`, `cloudflare`), `PERCHANCE_STYLE` (default "No style"), `MONGODB_DB`. Nothing is committed to git by the pipeline.
 
 ## Experiment ledger (`reports/experiments.md`)
 

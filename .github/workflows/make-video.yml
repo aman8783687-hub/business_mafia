@@ -1,0 +1,148 @@
+name: Business Mafia – Make Video
+
+# One-click video generation. Actions tab → Run workflow → optional topic
+# override → Run. The finished episode uploads to Cloudinary (~24h public
+# link) and the direct-download link lands in the run summary + artifacts.
+#
+# Required secrets: MONGODB_URI, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN,
+#   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
+#   plus one LLM key for opencode (ANTHROPIC_API_KEY / OPENAI_API_KEY / …).
+# Optional vars: IMAGE_BACKEND (default perchance), OPENCODE_MODEL, MAX_ATTEMPTS.
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic_override:
+        description: "Force topic (exact bank name). Empty = agent picks per topic-strategy"
+        required: false
+        default: ""
+      topic_hint:
+        description: "Free-text hint (e.g. 'chai wala in Mumbai'). Empty = none"
+        required: false
+        default: ""
+      image_backend:
+        description: "Image backend"
+        required: false
+        default: "perchance"
+        type: choice
+        options: [perchance, flux, cloudflare]
+      max_attempts:
+        description: "Max opencode attempts"
+        required: false
+        default: "4"
+      upload_to_cloudinary:
+        description: "Upload finished video to Cloudinary (24h link)"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: business-mafia
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  make-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      slug: ${{ steps.find.outputs.slug }}
+      download_url: ${{ steps.upload.outputs.download_url }}
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      MONGODB_DB: ${{ vars.MONGODB_DB }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      IMAGE_BACKEND: ${{ inputs.image_backend }}
+      PERCHANCE_STYLE: ${{ vars.PERCHANCE_STYLE }}
+      CLOUDFLARE_IMAGE_MODEL: ${{ vars.CLOUDFLARE_IMAGE_MODEL }}
+      OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
+      MAX_ATTEMPTS: ${{ inputs.max_attempts }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      # Headless: opencode must never block on a question/permission prompt.
+      OPENCODE_PERMISSION: '{"question":"deny","external_directory":{"**":"allow"}}'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ffmpeg, fonts, Python deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          pip install edge-tts pymongo requests pillow playwright
+          python3 -m playwright install --with-deps firefox
+
+      - name: Install opencode
+        run: |
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Build manual request prompt
+        run: |
+          EXTRA=""
+          if [ -n "${{ inputs.topic_override }}" ]; then
+            EXTRA="${EXTRA}MANUAL REQUEST for this run - use the topic \"${{ inputs.topic_override }}\" (exact bank name) if it exists and is queued; otherwise add it per topic-strategy and use it. "
+          fi
+          if [ -n "${{ inputs.topic_hint }}" ]; then
+            EXTRA="${EXTRA}Operator hint - ${{ inputs.topic_hint }}. "
+          fi
+          echo "CYCLE_EXTRA_PROMPT=$EXTRA" >> "$GITHUB_ENV"
+
+      - name: Make one video
+        working-directory: MafiaOfBusiness
+        run: bash scripts/run_cycle.sh
+
+      - name: Find finalized episode
+        id: find
+        working-directory: MafiaOfBusiness
+        run: |
+          SLUG="$(python3 - <<'PY'
+          import json, pathlib
+          best = (None, "")
+          for f in pathlib.Path("output").glob("*/posting.md"):
+              slug = f.parent.name
+              key = f.stat().st_mtime
+              if key > 0 and str(key) > best[1]:
+                  best = (slug, str(key))
+          print(best[0] or "")
+          PY
+          )"
+          # Fallback: newest finalize_log.json
+          if [ -z "$SLUG" ]; then
+            SLUG="$(ls -t episodes/*/08_publish/finalize_log.json 2>/dev/null | head -1 | cut -d/ -f2 || true)"
+          fi
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+          echo "Finalized episode: ${SLUG:-NONE}"
+          [ -n "$SLUG" ]
+          ls -lh "output/$SLUG/"
+
+      - name: Upload to Cloudinary (24h download link)
+        id: upload
+        if: inputs.upload_to_cloudinary && steps.find.outputs.slug != ''
+        working-directory: MafiaOfBusiness
+        run: python3 scripts/upload_cloudinary.py "${{ steps.find.outputs.slug }}"
+
+      - name: Attach episode package (24h retention)
+        if: always() && steps.find.outputs.slug != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: episode-${{ steps.find.outputs.slug }}
+          path: |
+            MafiaOfBusiness/output/${{ steps.find.outputs.slug }}/
+            MafiaOfBusiness/episodes/${{ steps.find.outputs.slug }}/08_publish/thumbnail.png
+            MafiaOfBusiness/episodes/${{ steps.find.outputs.slug }}/08_publish/metadata.json
+            MafiaOfBusiness/episodes/${{ steps.find.outputs.slug }}/08_publish/finalize_log.json
+          if-no-files-found: warn
+          retention-days: 1

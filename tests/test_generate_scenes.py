@@ -73,10 +73,12 @@ def test_dry_run_writes_prompt_plan_without_calling_the_backend(tmp_path, monkey
     assert plan[0]["beat"] == 1
 
 
-def test_backend_defaults_to_flux_and_can_be_switched(monkeypatch):
-    from scenes import cloudflare_orchestrator, flux_orchestrator
+def test_backend_defaults_to_perchance_and_can_be_switched(monkeypatch):
+    from scenes import cloudflare_orchestrator, flux_orchestrator, perchance_orchestrator
 
     calls = []
+    monkeypatch.setattr(perchance_orchestrator, "generate_episode_scenes",
+                        lambda *a: calls.append("perchance") or ([1], []))
     monkeypatch.setattr(flux_orchestrator, "generate_episode_scenes",
                         lambda *a: calls.append("flux") or ([1], []))
     monkeypatch.setattr(cloudflare_orchestrator, "generate_episode_scenes",
@@ -87,6 +89,8 @@ def test_backend_defaults_to_flux_and_can_be_switched(monkeypatch):
     assert generate_scenes.generate_episode_scenes("ep", "plan.json", "out", [1]) == ([1], [])
     monkeypatch.setenv("IMAGE_BACKEND", "")
     generate_scenes.generate_episode_scenes("ep", "plan.json", "out", [1])
+    monkeypatch.setenv("IMAGE_BACKEND", "flux")
+    generate_scenes.generate_episode_scenes("ep", "plan.json", "out", [1])
     monkeypatch.setenv("IMAGE_BACKEND", "cloudflare")
     generate_scenes.generate_episode_scenes("ep", "plan.json", "out", [1])
-    assert calls == ["flux", "flux", "cloudflare"]
+    assert calls == ["perchance", "perchance", "flux", "cloudflare"]
